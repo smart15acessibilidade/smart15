@@ -4,34 +4,34 @@
 # `ADR-003-deploy-com-docker-compose.md`
 
 ```markdown
-# ADR-003 — Implantação do Smart-15 com Docker Compose
+# ADR-003 — Deploying Smart-15 with Docker Compose
 
 ## Status
 
-Aceito.
+Accepted.
 
-## Data
+## Date
 
 2026-07-18.
 
-## Contexto
+## Context
 
-O Smart-15 deverá ser entregue para execução em ambiente de servidor da universidade.
+Smart-15 must be delivered for execution in the university’s server environment.
 
-A aplicação possui diferentes componentes e dependências:
+The application has different components and dependencies:
 
 - GeoLibre Web;
-- plugin Smart-15;
-- backend FastAPI;
-- bibliotecas Python geoespaciais;
-- Nginx ou outro proxy reverso;
-- diretórios de dados;
-- arquivos temporários;
-- resultados;
-- relatórios;
-- configurações de ambiente.
+- Smart-15 plugin;
+- FastAPI backend;
+- Python geospatial libraries;
+- Nginx or another reverse proxy;
+- data directories;
+- temporary files;
+- results;
+- reports;
+- environment configuration.
 
-O backend utiliza bibliotecas que podem exigir dependências de sistema operacional, como:
+The backend uses libraries that may require operating system dependencies, such as:
 
 - GDAL;
 - PROJ;
@@ -41,69 +41,69 @@ O backend utiliza bibliotecas que podem exigir dependências de sistema operacio
 - OSMnx;
 - Scikit-learn.
 
-A instalação manual dessas dependências no servidor aumentaria o risco de diferenças entre os ambientes de desenvolvimento, homologação e produção.
+Manually installing these dependencies on the server would increase the risk of differences between development, staging, and production environments.
 
-O projeto precisa de um processo de implantação:
+The project needs a deployment process that is:
 
-- documentado;
-- reproduzível;
-- versionado;
-- simples de executar;
-- adequado a um servidor Linux;
-- independente da estação do desenvolvedor.
+- documented;
+- reproducible;
+- versioned;
+- easy to execute;
+- suitable for a Linux server;
+- independent of the developer’s workstation.
 
-## Decisão
+## Decision
 
-O Smart-15 será implantado utilizando contêineres Docker coordenados por Docker Compose.
+Smart-15 will be deployed using Docker containers coordinated by Docker Compose.
 
-A implantação inicial será composta, no mínimo, pelos seguintes serviços:
+The initial deployment will include at least the following services:
 
 ```text
 smart15-web
-    GeoLibre Web com plugin Smart-15
+    GeoLibre Web with Smart-15 plugin
 
 smart15-api
-    API FastAPI e motor geoespacial
+    FastAPI API and geospatial engine
 
 reverse-proxy
-    entrada HTTP/HTTPS e roteamento
+    HTTP/HTTPS ingress and routing
 ```
 
-Poderão ser adicionados futuramente:
+The following services may be added later:
 
 ```text
 worker
-    processamento assíncrono
+    asynchronous processing
 
 redis
-    fila, cache ou estado temporário
+    queue, cache, or transient state
 
 postgis
-    persistência geoespacial
+    geospatial persistence
 
 object-storage
-    armazenamento de grandes artefatos
+    storage for large artifacts
 ```
 
-Arquitetura de implantação
+Deployment architecture
 
 ```text
-Navegador
+Browser
     │
     │ HTTPS
     ▼
 Nginx
     ├── /        → GeoLibre Web
     ├── /api     → Smart-15 API
-    ├── /files   → resultados e exportações
-    └── /reports → relatórios
+    ├── /files   → results and exports
+    └── /reports → reports
 ```
 
-O Nginx atuará como ponto único de acesso.
+Nginx will act as the single point of access.
 
-Isso permitirá que o navegador acesse frontend e backend pelo mesmo domínio, reduzindo problemas de CORS.
+This will allow the browser to access frontend and backend under the same domain, reducing CORS issues.
 
-Estrutura prevista
+Expected structure
 
 ```text
 deploy/
@@ -117,11 +117,11 @@ deploy/
 └── README.md
 ```
 
-O arquivo .env real não será versionado.
+The real `.env` file will not be tracked in version control.
 
-Será fornecido apenas um arquivo .env.example.
+Only a `.env.example` file will be provided.
 
-Exemplo conceitual de Docker Compose
+Conceptual Docker Compose example
 
 ```yaml
 services:
@@ -161,13 +161,13 @@ volumes:
   smart15-results:
 ```
 
-O conteúdo final poderá diferir conforme a arquitetura efetivamente adotada.
+The final content may differ depending on the architecture actually adopted.
 
-## Estratégia de imagens
+## Image strategy
 
-Durante o desenvolvimento, o Compose poderá utilizar build.
+During development, Compose may use build.
 
-Exemplo:
+Example:
 
 ```yaml
 services:
@@ -176,9 +176,9 @@ services:
       context: ../backend
 ```
 
-Para homologação e produção, serão utilizadas preferencialmente imagens versionadas.
+For staging and production, versioned images will be preferred.
 
-Exemplo:
+Example:
 
 ```yaml
 services:
@@ -189,9 +189,9 @@ services:
     image: ghcr.io/geosmart/smart15-web:1.0.0
 ```
 
-Não será recomendado o uso exclusivo da tag latest em produção.
+Using only the `latest` tag in production will not be recommended.
 
-As imagens deverão utilizar versões explícitas:
+Images should use explicit versions:
 
 ```text
 1.0.0
@@ -199,34 +199,34 @@ As imagens deverão utilizar versões explícitas:
 1.1.0
 ```
 
-## Publicação das imagens
+## Image publishing
 
-As imagens poderão ser publicadas no GitHub Container Registry.
+Images may be published to GitHub Container Registry.
 
-O fluxo esperado será:
+The expected flow will be:
 
 ```text
-Commit ou tag
+Commit or tag
     │
     ▼
 GitHub Actions
     │
-    ├── executa testes
-    ├── constrói as imagens
-    └── publica no registry
+    ├── run tests
+    ├── build images
+    └── publish to registry
     │
     ▼
-Servidor da universidade
+University server
     │
     ├── docker compose pull
     └── docker compose up -d
 ```
 
-## Configuração
+## Configuration
 
-As configurações da aplicação serão fornecidas por variáveis de ambiente.
+Application settings will be provided through environment variables.
 
-Exemplos:
+Examples:
 
 ```text
 SMART15_ENV
@@ -238,180 +238,180 @@ SMART15_MAX_ANALYSIS_AREA
 SMART15_ALLOWED_ORIGINS
 ```
 
-Credenciais e tokens não deverão ser armazenados no repositório.
+Credentials and tokens should not be stored in the repository.
 
-## Persistência
+## Persistence
 
-Os dados que precisam sobreviver à recriação dos contêineres serão armazenados em volumes.
+Data that must survive container recreation will be stored in volumes.
 
-Exemplos:
+Examples:
 
-- resultados;
-- relatórios;
-- arquivos exportados;
-- cache de dados;
-- arquivos enviados pelo usuário;
-- logs, caso não sejam enviados para outro serviço.
+- results;
+- reports;
+- exported files;
+- data cache;
+- files uploaded by users;
+- logs, if they are not sent to another service.
 
-Arquivos temporários poderão ser removidos após um período configurável.
+Temporary files may be removed after a configurable period.
 
 ## Backup
 
-A implantação deverá documentar:
+The deployment should document:
 
-- quais volumes precisam de backup;
-- onde ficam os arquivos persistentes;
-- como restaurar os dados;
-- como exportar uma release;
-- como recuperar uma versão anterior.
+- which volumes need backup;
+- where persistent files are located;
+- how to restore the data;
+- how to export a release;
+- how to recover a previous version.
 
-O código-fonte não será considerado backup dos dados produzidos.
+Source code will not be considered a backup of produced data.
 
-## Alternativas consideradas
+## Alternatives considered
 
-### Instalação manual no servidor
+### Manual installation on the server
 
-A instalação manual de Python, Node.js, bibliotecas geoespaciais e Nginx seria possível.
+Manual installation of Python, Node.js, geospatial libraries, and Nginx would be possible.
 
-Entretanto, aumentaria:
+However, it would increase:
 
-- divergências entre ambientes;
-- dificuldade de suporte;
-- risco de incompatibilidade;
-- tempo de implantação;
-- dependência do administrador do servidor.
+- differences between environments;
+- support difficulty;
+- incompatibility risk;
+- deployment time;
+- dependence on the server administrator.
 
-### Kubernetes ou OpenShift
+### Kubernetes or OpenShift
 
-Kubernetes e OpenShift oferecem:
+Kubernetes and OpenShift offer:
 
-- escalabilidade;
-- alta disponibilidade;
-- gerenciamento avançado;
-- observabilidade;
-- deploy declarativo.
+- scalability;
+- high availability;
+- advanced management;
+- observability;
+- declarative deployment.
 
-Entretanto, para a primeira versão, representariam maior complexidade operacional e exigiriam infraestrutura específica.
+However, for the first version, they would represent greater operational complexity and require specific infrastructure.
 
-Docker Compose é suficiente para uma implantação inicial em servidor único.
+Docker Compose is sufficient for an initial deployment on a single server.
 
-A arquitetura em contêineres permitirá evolução futura para Kubernetes ou OpenShift.
+The container architecture will allow future evolution to Kubernetes or OpenShift.
 
-### Execução em plataformas serverless
+### Running on serverless platforms
 
-Serviços serverless poderiam simplificar parte do deploy.
+Serverless services could simplify part of the deployment.
 
-Entretanto, o Smart-15 possui:
+However, Smart-15 has:
 
-- processamento de longa duração;
-- grande uso de memória;
-- dependências nativas;
-- manipulação de arquivos grandes;
-- necessidade de armazenamento persistente.
+- long-running processing;
+- high memory usage;
+- native dependencies;
+- handling of large files;
+- need for persistent storage.
 
-Essas características podem não se adequar bem a ambientes serverless.
+These characteristics may not fit well in serverless environments.
 
-### Consequências positivas
+### Positive consequences
 
-- Ambiente reproduzível.
-- Instalação simplificada.
-- Isolamento das dependências.
-- Facilidade de atualização.
-- Possibilidade de rollback.
-- Maior consistência entre desenvolvimento e produção.
-- Menor dependência da configuração do servidor.
-- Base para futura migração para OpenShift ou Kubernetes.
-- Facilidade de entrega de imagens prontas para a universidade.
+- Reproducible environment.
+- Simplified installation.
+- Dependency isolation.
+- Easier updates.
+- Possibility of rollback.
+- Greater consistency between development and production.
+- Less dependence on server configuration.
+- Basis for future migration to OpenShift or Kubernetes.
+- Easier delivery of ready-made images to the university.
 
-### Consequências negativas
+### Negative consequences
 
-- Necessidade de Docker no servidor.
-- Necessidade de conhecimento básico de contêineres.
-- Gerenciamento adicional de volumes e imagens.
-- Consumo de espaço em disco.
-- Necessidade de atualização das imagens base.
-- Docker Compose não oferece alta disponibilidade nativa.
+- Requirement for Docker on the server.
+- Need for basic container knowledge.
+- Additional management of volumes and images.
+- Disk space consumption.
+- Need to update base images.
+- Docker Compose does not provide native high availability.
 
-### Riscos
+### Risks
 
-Servidor sem acesso ao registry
+Server without registry access
 
-A universidade pode utilizar um servidor sem acesso externo.
+The university may use a server without external access.
 
-Mitigação:
+Mitigation:
 
-- gerar um pacote offline;
-- exportar as imagens com docker save;
-- importar com docker load;
-- fornecer arquivos Compose e documentação.
+- create an offline package;
+- export images with docker save;
+- import with docker load;
+- provide Compose files and documentation.
 
-### Crescimento dos arquivos
+### Growing file volumes
 
-Rasters e exportações podem consumir grande volume de armazenamento.
+Rasters and exports may consume large storage volume.
 
-Mitigação:
+Mitigation:
 
-- configurar política de retenção;
-- remover arquivos temporários;
-- monitorar espaço disponível;
-- separar dados persistentes;
-- limitar tamanho e área das simulações.
+- configure a retention policy;
+- remove temporary files;
+- monitor available space;
+- separate persistent data;
+- limit simulation size and area.
 
-### Falha durante atualização
+### Failure during update
 
-Uma nova imagem pode apresentar problema em produção.
+A new image may have an issue in production.
 
-Mitigação:
+Mitigation:
 
-- utilizar tags imutáveis;
-- manter a versão anterior;
-- documentar rollback;
-- testar as imagens antes da implantação.
+- use immutable tags;
+- keep the previous version;
+- document rollback;
+- test images before deployment.
 
-### Credenciais expostas
+### Exposed credentials
 
-Tokens podem ser incluídos indevidamente no código ou nas imagens.
+Tokens may be inadvertently included in code or images.
 
-Mitigação:
+Mitigation:
 
-- utilizar variáveis de ambiente;
-- manter .env fora do Git;
-- revisar imagens e workflows;
-- utilizar secrets do GitHub Actions.
+- use environment variables;
+- keep `.env` out of Git;
+- review images and workflows;
+- use GitHub Actions secrets.
 
-## Critérios de validação
+## Validation criteria
 
-A decisão será considerada validada quando:
+The decision will be considered validated when:
 
-- a aplicação puder ser iniciada com docker compose up -d;
-- frontend e backend forem acessíveis pelo mesmo domínio;
-- os dados persistirem após reinício;
-- uma nova versão puder ser implantada por troca de tag;
-- o rollback puder ser realizado;
-- a instalação puder ser reproduzida em um servidor Linux limpo;
-- o procedimento estiver documentado.
+- the application can be started with `docker compose up -d`;
+- frontend and backend are accessible under the same domain;
+- data persists after restart;
+- a new version can be deployed by swapping tags;
+- rollback can be performed;
+- the installation can be reproduced on a clean Linux server;
+- the procedure is documented.
 
-## Evolução futura
+## Future evolution
 
-A arquitetura poderá evoluir para:
+The architecture may evolve to:
 
-- fila de tarefas;
-- múltiplos workers;
-- banco PostGIS;
-- armazenamento S3 compatível;
-- monitoramento;
-- centralização de logs;
+- task queue;
+- multiple workers;
+- PostGIS database;
+- S3-compatible storage;
+- monitoring;
+- centralized logs;
 - Kubernetes;
 - OpenShift.
 
-Essa evolução não exigirá alterar a separação conceitual entre frontend, API e processamento.
+This evolution will not require changing the conceptual separation between frontend, API, and processing.
 
-## Revisão da decisão
+## Decision review
 
-Esta decisão deve ser revisada caso:
+This decision should be reviewed if:
 
-- a universidade adote obrigatoriamente outra plataforma;
-- seja necessário escalar horizontalmente;
-- haja requisitos de alta disponibilidade;
-- o volume de processamento exija uma infraestrutura distribuída;
-- Docker Compose deixe de atender ao ambiente institucional.
+- the university mandates another platform;
+- horizontal scaling becomes necessary;
+- there are high-availability requirements;
+- processing volume requires distributed infrastructure;
+- Docker Compose no longer meets the institutional environment.

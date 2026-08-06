@@ -4,130 +4,130 @@
 # `ADR-002-plugin-e-backend-separados.md`
 
 ```markdown
-# ADR-002 — Separação entre o plugin Smart-15 e o backend geoespacial
+# ADR-002 — Separation between the Smart-15 plugin and the geospatial backend
 
 ## Status
 
-Aceito.
+Accepted.
 
-## Data
+## Date
 
 2026-07-18.
 
-## Contexto
+## Context
 
-O Smart-15 possui duas categorias principais de responsabilidade.
+Smart-15 has two main categories of responsibility.
 
-A primeira está relacionada à interação com o usuário:
+The first is related to user interaction:
 
-- seleção da área de análise;
-- configuração do perfil;
-- escolha dos parâmetros;
-- submissão da simulação;
-- acompanhamento do processamento;
-- exibição de camadas;
-- apresentação de indicadores;
-- download de resultados.
+- selecting the analysis area;
+- configuring the profile;
+- choosing parameters;
+- submitting the simulation;
+- monitoring processing;
+- displaying layers;
+- presenting indicators;
+- downloading results.
 
-A segunda está relacionada ao processamento geoespacial:
+The second is related to geospatial processing:
 
-- obtenção da rede viária;
-- processamento de dados do OpenStreetMap;
-- obtenção e tratamento de rasters;
-- cálculo de declividade;
-- processamento de temperatura superficial;
-- classificação de vegetação e cobertura;
-- ponderação da rede;
-- cálculo de rotas;
-- geração de isócronas;
-- agregação H3;
-- exportação de arquivos;
-- geração de relatórios.
+- obtaining the road network;
+- processing OpenStreetMap data;
+- obtaining and processing rasters;
+- calculating slope;
+- processing surface temperature;
+- classifying vegetation and coverage;
+- weighting the network;
+- calculating routes;
+- generating isochrones;
+- H3 aggregation;
+- exporting files;
+- generating reports.
 
-Essas duas categorias possuem características técnicas diferentes.
+These two categories have different technical characteristics.
 
-A interface deve executar no navegador e permanecer responsiva.
+The interface must run in the browser and remain responsive.
 
-O processamento geoespacial pode consumir grande quantidade de:
+Geospatial processing can consume large amounts of:
 
 - CPU;
-- memória;
-- disco;
-- tempo de execução;
-- bibliotecas nativas;
-- dados temporários.
+- memory;
+- disk;
+- runtime;
+- native libraries;
+- temporary data.
 
-O navegador não é o ambiente adequado para realizar integralmente esse processamento.
+The browser is not the appropriate environment to perform this processing entirely.
 
-## Decisão
+## Decision
 
-A interface Smart-15 será implementada como plugin do GeoLibre.
+The Smart-15 interface will be implemented as a GeoLibre plugin.
 
-O processamento geoespacial será implementado em um backend independente utilizando Python e FastAPI.
+The geospatial processing will be implemented in an independent backend using Python and FastAPI.
 
-A comunicação entre plugin e backend ocorrerá por API HTTP.
+Communication between the plugin and backend will occur via HTTP API.
 
-A divisão principal será:
+The main division will be:
 
 ```text
-Plugin Smart-15
-    interface, interação e visualização
+Smart-15 Plugin
+    interface, interaction, and visualization
 
 Smart-15 API
-    validação, orquestração e disponibilização dos resultados
+    validation, orchestration, and result delivery
 
-Motor Geoespacial
-    cálculos, dados ambientais, roteamento e exportação
+Geospatial Engine
+    calculations, environmental data, routing, and export
 ```
 
-## Responsabilidades do plugin
+## Plugin responsibilities
 
-### O plugin será responsável por:
+### The plugin will be responsible for:
 
-- apresentar os controles da aplicação;
-- receber os parâmetros do usuário;
-- obter a área selecionada no mapa;
-- enviar solicitações para a API;
-- apresentar o estado da simulação;
-- consumir os resultados;
-- adicionar camadas ao GeoLibre;
-- exibir isócronas, rotas, POIs e grades;
-- exibir indicadores resumidos;
-- disponibilizar links para download e relatório;
-- apresentar mensagens de erro de forma compreensível.
+- presenting application controls;
+- receiving user parameters;
+- obtaining the selected area on the map;
+- sending requests to the API;
+- presenting the simulation status;
+- consuming the results;
+- adding layers to GeoLibre;
+- displaying isochrones, routes, POIs, and grids;
+- displaying summary indicators;
+- providing download and report links;
+- presenting error messages in a comprehensible way.
 
-### O plugin não será responsável por:
+### The plugin will not be responsible for:
 
-- executar processamento raster pesado;
-- calcular rotas completas;
-- processar grandes grafos;
-- executar classificação geoespacial em larga escala;
-- armazenar arquivos de resultado;
-- gerar arquivos Shapefile, KML ou PDF.
+- executing heavy raster processing;
+- calculating complete routes;
+- processing large graphs;
+- performing large-scale geospatial classification;
+- storing result files;
+- generating Shapefile, KML, or PDF files.
 
-## Responsabilidades do backend
+## Backend responsibilities
 
-### O backend será responsável por:
+### The backend will be responsible for:
 
-- validar os parâmetros recebidos;
-- criar um identificador de simulação;
-- coordenar o processamento;
-- consultar serviços externos;
-- processar a rede viária;
-- processar rasters;
-- aplicar os fatores de ponderação;
-- calcular isócronas e indicadores;
-- gerar arquivos de saída;
-- armazenar os artefatos;
-- disponibilizar os resultados;
-- gerar o relatório técnico;
-- registrar erros e informações de execução.
+- validating received parameters;
+- creating a simulation identifier;
+- coordinating processing;
+- querying external services;
+- processing the road network;
+- processing rasters;
+- applying weighting factors;
+- calculating isochrones and indicators;
+- generating output files;
+- storing artifacts;
+- making results available;
+- generating the technical report;
+- logging errors and execution information.
 
-## Contrato de comunicação
+## Communication contract
 
-O plugin enviará solicitações em JSON.
+The plugin will send requests in JSON.
 
-Exemplo conceitual:
+Conceptual example:
 
 ```json
 {
@@ -145,9 +145,9 @@ Exemplo conceitual:
 }
 ```
 
-A API retornará um identificador da simulação e seu estado.
+The API will return a simulation identifier and its status.
 
-Exemplo:
+Example:
 
 ```json
 {
@@ -156,7 +156,7 @@ Exemplo:
 }
 ```
 
-Após o processamento, a API poderá retornar:
+After processing, the API may return:
 
 ```json
 {
@@ -182,82 +182,82 @@ Após o processamento, a API poderá retornar:
 }
 ```
 
-## Formatos de dados
+## Data formats
 
-Serão utilizados, conforme a necessidade:
+The following will be used as needed:
 
-- JSON para parâmetros, estados e indicadores;
-- GeoJSON para camadas vetoriais;
-- PNG ou GeoTIFF para resultados raster;
-- ZIP para agrupamento de arquivos exportados;
-- PDF para relatórios;
-- HTTP para transferência dos dados.
+- JSON for parameters, states, and indicators;
+- GeoJSON for vector layers;
+- PNG or GeoTIFF for raster results;
+- ZIP for grouped exported files;
+- PDF for reports;
+- HTTP for data transfer.
 
-GeoJSON é um formato de resposta, não um componente independente da arquitetura.
+GeoJSON is a response format, not an independent architecture component.
 
-## Alternativas consideradas
-### Implementar todo o processamento no plugin
+## Alternatives considered
+### Implement all processing in the plugin
 
-Essa abordagem reduziria o número de serviços.
+This approach would reduce the number of services.
 
-Entretanto, seria inadequada porque:
+However, it would be inadequate because:
 
-- o navegador possui recursos limitados;
-- bibliotecas Python geoespaciais não estariam disponíveis;
-- grandes rasters poderiam bloquear a interface;
-- o processamento seria repetido em cada estação;
-- o código ficaria fortemente acoplado ao frontend;
-- seria difícil controlar e reproduzir o ambiente.
+- the browser has limited resources;
+- Python geospatial libraries would not be available;
+- large rasters could block the interface;
+- processing would be repeated on every workstation;
+- the code would become tightly coupled to the frontend;
+- it would be difficult to control and reproduce the environment.
 
-### Implementar a interface diretamente no backend
+### Implement the interface directly in the backend
 
-Essa alternativa permitiria criar uma aplicação web convencional com templates.
+This alternative would allow creating a conventional web application with templates.
 
-Entretanto, reduziria o aproveitamento do GeoLibre e dificultaria:
+However, it would reduce GeoLibre reuse and make it harder to:
 
-- integração com o mapa;
-- criação de camadas;
-- controles interativos;
-- reutilização da arquitetura de plugins;
-- evolução independente da interface.
+- integrate with the map;
+- create layers;
+- provide interactive controls;
+- reuse the plugin architecture;
+- evolve the interface independently.
 
-### Incorporar o backend dentro do serviço interno do GeoLibre
+### Incorporate the backend inside GeoLibre’s internal service
 
-Essa alternativa diminuiria a quantidade de contêineres.
+This alternative would reduce the number of containers.
 
-Entretanto, criaria maior acoplamento e misturaria responsabilidades de plataforma e domínio.
+However, it would create greater coupling and mix platform and domain responsibilities.
 
-O backend Smart-15 possui dependências geoespaciais específicas e um ciclo de evolução próprio.
+The Smart-15 backend has specific geospatial dependencies and its own evolution cycle.
 
-## Consequências positivas
+## Positive consequences
 
-- Separação clara de responsabilidades.
-- Interface mais leve e responsiva.
-- Backend reutilizável por outros clientes.
-- Possibilidade de testar frontend e backend separadamente.
-- Facilidade para escalar o processamento.
-- Isolamento das dependências Python.
-- Melhor organização do código.
-- Possibilidade de futuras integrações por API.
-- Facilidade para geração de relatórios e exportações.
-- Menor acoplamento ao núcleo do GeoLibre.
+- Clear separation of responsibilities.
+- Lighter and more responsive interface.
+- Backend reusable by other clients.
+- Possibility to test frontend and backend separately.
+- Easier to scale processing.
+- Isolation of Python dependencies.
+- Better code organization.
+- Possibility of future API integrations.
+- Easier report and export generation.
+- Lower coupling to the GeoLibre core.
 
-## Consequências negativas
+## Negative consequences
 
-- Aumento do número de componentes implantados.
-- Necessidade de definir e manter um contrato de API.
-- Necessidade de tratamento de falhas de rede.
-- Necessidade de configurar CORS ou proxy reverso.
-- Necessidade de gerenciar arquivos e estados de simulação.
-- Maior complexidade de observabilidade.
+- Increased number of deployed components.
+- Need to define and maintain an API contract.
+- Need to handle network failures.
+- Need to configure CORS or reverse proxy.
+- Need to manage files and simulation states.
+- Greater observability complexity.
 
-## Riscos
+## Risks
 
-### Requisições demoradas
+### Long-running requests
 
-Simulações podem exceder o tempo normal de uma requisição HTTP.
+Simulations may exceed the normal duration of an HTTP request.
 
-Mitigação:
+Mitigation:
 
 - utilizar processamento assíncrono;
 - retornar um identificador de simulação;

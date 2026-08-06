@@ -1,39 +1,39 @@
 ```mermaid
 C4Container
-    title Smart-15 — Diagrama de Contêineres
+    title Smart-15 — Container Diagram
 
-    Person(usuario, "Usuário", "Configura cenários e consulta resultados.")
+    Person(usuario, "User", "Configures scenarios and reviews results.")
 
-    System_Ext(osm, "OpenStreetMap", "Rede viária e pontos de interesse.")
-    System_Ext(planetary, "Microsoft Planetary Computer", "Imagens e dados ambientais.")
-    System_Ext(copernicus, "Copernicus DEM", "Modelo digital de elevação.")
+    System_Ext(osm, "OpenStreetMap", "Road network and points of interest.")
+    System_Ext(planetary, "Microsoft Planetary Computer", "Imagery and environmental data.")
+    System_Ext(copernicus, "Copernicus DEM", "Digital elevation model.")
 
     System_Boundary(smart15, "Smart-15") {
 
-        Container(web, "GeoLibre Web", "React / TypeScript / MapLibre", "Aplicação cartográfica acessada pelo navegador.")
+        Container(web, "GeoLibre Web", "React / TypeScript / MapLibre", "Map application accessed through the browser.")
 
-        Container(plugin, "Plugin Smart-15", "JavaScript ou React/TypeScript", "Painel de configuração, submissão das simulações e visualização dos resultados.")
+        Container(plugin, "Smart-15 Plugin", "JavaScript or React/TypeScript", "Configuration panel, simulation submission, and result visualization.")
 
-        Container(api, "Smart-15 API", "Python / FastAPI", "Expõe os serviços HTTP, valida parâmetros e coordena as análises.")
+        Container(api, "Smart-15 API", "Python / FastAPI", "Exposes HTTP services, validates parameters, and coordinates analyses.")
 
-        Container(engine, "Motor Geoespacial", "Python / GeoPandas / OSMnx / NetworkX / Rasterio / Scikit-learn", "Processa rede viária, rasters, declividade, temperatura, vegetação, rotas e isócronas.")
+        Container(engine, "Geospatial Engine", "Python / GeoPandas / OSMnx / NetworkX / Rasterio / Scikit-learn", "Processes road network, rasters, slope, temperature, vegetation, routes, and isochrones.")
 
-        Container(report, "Gerador de Relatórios", "Python / Jinja2 / WeasyPrint", "Produz relatórios técnicos em HTML e PDF.")
+        Container(report, "Report Generator", "Python / Jinja2 / WeasyPrint", "Produces technical reports in HTML and PDF.")
 
-        ContainerDb(storage, "Armazenamento de Trabalho", "Sistema de arquivos ou Object Storage", "Mantém arquivos temporários, rasters, GeoJSON, imagens e relatórios.")
+        ContainerDb(storage, "Work Storage", "Filesystem or Object Storage", "Holds temporary files, rasters, GeoJSON, imagery, and reports.")
     }
 
-    Rel(usuario, web, "Acessa", "HTTPS")
-    Rel(web, plugin, "Carrega e executa")
-    Rel(plugin, api, "Envia parâmetros e consulta resultados", "REST/JSON")
-    Rel(api, engine, "Solicita processamento")
-    Rel(api, report, "Solicita geração de relatório")
-    Rel(engine, osm, "Obtém rede e POIs", "HTTPS")
-    Rel(engine, planetary, "Obtém dados ambientais", "STAC/HTTPS")
-    Rel(engine, copernicus, "Obtém modelo de elevação", "HTTPS")
-    Rel(engine, storage, "Lê e grava artefatos")
-    Rel(report, storage, "Lê resultados e grava relatórios")
-    Rel(api, storage, "Disponibiliza resultados")
-    Rel(api, plugin, "Retorna status, indicadores e URLs dos artefatos", "JSON/GeoJSON")
-    Rel(plugin, web, "Adiciona camadas, isócronas e indicadores ao mapa")
+    Rel(usuario, web, "Accesses", "HTTPS")
+    Rel(web, plugin, "Loads and executes")
+    Rel(plugin, api, "Sends parameters and queries results", "REST/JSON")
+    Rel(api, engine, "Requests processing")
+    Rel(api, report, "Requests report generation")
+    Rel(engine, osm, "Fetches network and POIs", "HTTPS")
+    Rel(engine, planetary, "Fetches environmental data", "STAC/HTTPS")
+    Rel(engine, copernicus, "Fetches elevation model", "HTTPS")
+    Rel(engine, storage, "Reads and writes artifacts")
+    Rel(report, storage, "Reads results and writes reports")
+    Rel(api, storage, "Makes results available")
+    Rel(api, plugin, "Returns status, indicators, and artifact URLs", "JSON/GeoJSON")
+    Rel(plugin, web, "Adds layers, isochrones, and indicators to the map")
 ```

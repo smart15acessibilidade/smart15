@@ -4,7 +4,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 
-# Resultados e cache do backend
+# Backend results and cache
 backend/temp_export/
 backend/cache/
 backend/exportacao_smart15.zip
@@ -19,6 +19,6 @@ Resultados_Smart15.zip
 .idea/
 .vscode/
 
-# Sistema operacional
+# Operating system
 .DS_Store
 Thumbs.db

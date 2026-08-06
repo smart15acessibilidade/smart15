@@ -1,35 +1,55 @@
-Smart-15 v2.0 (Geo-Analytics Metrics) O Smart-15 revoluciona o conceito de "Cidades de 15 Minutos" (15-Minute City) ao abandonar o simples cálculo de distância euclidiana. Em vez disso, esta ferramenta introduz uma física de movimento humanizada, cruzando a malha viária com dados ambientais de satélite e algoritmos de Inteligência Artificial para calcular o verdadeiro esforço e conforto térmico de pedestres e ciclistas.
+Smart-15 v2.0 (Geo-Analytics Metrics)
 
- Principais Novidades desta Versão Nesta versão 2.0, o motor de roteamento e o processamento de rasters foram totalmente reconstruídos para entregar precisão cirúrgica e automação em nuvem:
+Smart-15 revolutionizes the "15-Minute City" concept by moving beyond simple Euclidean distance calculations. Instead, this tool introduces a humanized movement physics model, combining the road network with satellite environmental data and artificial intelligence algorithms to calculate the real effort and thermal comfort of pedestrians and cyclists.
 
-️ Integração Cloud-Native (LST): Conexão direta com o Microsoft Planetary Computer para extração automática e gratuita da Temperatura da Superfície (Banda 10 do Landsat 9).
+ What’s New in This Version
 
-⛰️ Relevo e Equação de Tobler (DEM): Escalonamento geodésico rigoroso (Graus para Metros Reais) utilizando dados do Copernicus. A inclinação real (declividade) frena ou acelera o indivíduo dinamicamente na rede do OpenStreetMap.
+In version 2.0, the routing engine and raster processing have been completely rebuilt to deliver surgical precision and cloud automation:
 
- Motor de IA (Smart OBIA): Novo algoritmo de Classificação Baseada em Objetos (Decision Tree Classifier) que rasteriza milhares de pixéis a partir de amostras do utilizador. Classifica o asfalto, edifícios e árvores de forma massiva para injetar o Fator de Sombreamento (FIS) na rota.
+️ Cloud-Native Integration (LST): Direct connection to Microsoft Planetary Computer for automatic and free extraction of Surface Temperature (Landsat 9 Band 10).
 
-️ Escudo Anti-NaN: Proteção matemática avançada que impede a quebra da malha de roteamento em zonas de dados ausentes nas bordas dos satélites.
+⛰️ Terrain and Tobler’s Equation (DEM): Rigorous geodetic scaling (degrees to real meters) using Copernicus data. Actual slope dynamically slows or speeds up individuals on the OpenStreetMap network.
 
-️ Funcionalidades de Destaque  Simulação Multi-Perfil: Acessibilidade inclusiva. O algoritmo respeita diferentes velocidades e limites de tolerância térmica para Adultos, Crianças e Idosos (a pé ou de bicicleta).
+ AI Engine (Smart OBIA): New object-based classification algorithm (Decision Tree Classifier) that rasterizes thousands of pixels from user samples. It classifies asphalt, buildings, and trees at scale to inject the Shading Factor (FIS) into the route.
 
-️ Tesselação e Isócronas: Exportação simultânea de manchas contínuas de tempo (Isócronas) e agregações estatísticas hexagonais (Grelha H3 da Uber).
+️ Anti-NaN Shield: Advanced mathematical protection that prevents routing mesh failure in areas of missing satellite data at the edges.
 
- Preenchimento de Penalidade: Zonas além do raio de 15 minutos não ficam vazias; são ativamente mapeadas como áreas de exclusão/penalidade vermelha (> 15 min).
+️ Highlight Features
 
- Visualização Interativa de Alto Nível:
+ Multi-Profile Simulation: Inclusive accessibility. The algorithm respects different speeds and thermal tolerance limits for Adults, Children, and Seniors (walking or cycling).
 
-Identificador Raio-X: Passe o rato para ler classes da IA, categorias de POIs e tempos de roteamento.
+️ Tessellation and Isochrones: Simultaneous export of continuous time areas (Isochrones) and hexagonal statistical aggregations (Uber H3 Grid).
 
-Cortina Comparativa (Swipe): Analise cenários dividindo o ecrã a meio.
+ Penalty Fill: Areas beyond the 15-minute radius are not left empty; they are actively mapped as red exclusion/penalty zones (> 15 min).
 
-Legendas Dinâmicas: Valores exatos (vmin/vmax) extraídos diretamente dos satélites para as rampas Plasma (Declividade) e Nipy Spectral (Elevação).
+ High-Level Interactive Visualization:
 
-Exportação Segura: Geração nativa de .ZIP (SHP, GeoJSON, KML) e ferramenta integrada de Captura de Ecrã (Screenshot).
+X-Ray Identifier: Hover to read AI classes, POI categories, and routing times.
 
- Stack Tecnológico Backend (Motor Python): FastAPI, GeoPandas, OSMnx, NetworkX, Rasterio, Scikit-learn (Decision Trees), pystac-client e stackstac. Frontend (Painel): JavaScript Puro, renderização WebGL/MapLibre para Extrusão 3D e manipulação de fontes GeoJSON.
+Comparison Curtain (Swipe): Analyze scenarios by splitting the screen in half.
 
- Instalação Rápida (Backend) Para garantir que o motor em nuvem funciona perfeitamente, instale as dependências:
+Dynamic Legends: Exact values (vmin/vmax) extracted directly from satellite data for Plasma ramps (Slope) and Nipy Spectral (Elevation).
 
-Bash pip install fastapi uvicorn geopandas osmnx networkx rasterio scikit-learn pystac-client planetary-computer stackstac rioxarray h3 Inicie o servidor:
+Secure Export: Native generation of .ZIP (SHP, GeoJSON, KML) and integrated Screenshot capture tool.
 
-Bash uvicorn main:app --reload --port 8000 Nota do Desenvolvedor: Este projeto funde cartografia, física, e saúde urbana. Analisar uma
+ Technology Stack
+
+Backend (Python Engine): FastAPI, GeoPandas, OSMnx, NetworkX, Rasterio, Scikit-learn (Decision Trees), pystac-client, and stackstac.
+
+Frontend (Panel): Plain JavaScript, WebGL/MapLibre rendering for 3D extrusion and GeoJSON source handling.
+
+ Quick Installation (Backend)
+
+To ensure the cloud engine works properly, install the dependencies:
+
+Bash
+
+pip install fastapi uvicorn geopandas osmnx networkx rasterio scikit-learn pystac-client planetary-computer stackstac rioxarray h3
+
+Start the server:
+
+Bash
+
+uvicorn main:app --reload --port 8000
+
+Developer Note: This project combines cartography, physics, and urban health.

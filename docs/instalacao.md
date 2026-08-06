@@ -1,32 +1,32 @@
-# Instalação do Smart15
+# Smart15 Installation
 
-Este guia explica como instalar e iniciar o Smart15 em um servidor Linux ou em ambiente Windows + WSL2.
+This guide explains how to install and start Smart15 on a Linux server or in a Windows + WSL2 environment.
 
-O Smart15 é executado com Docker. Isso significa que seus componentes — interface GeoLibre, plugin Smart15 e backend de processamento — são preparados e iniciados de forma padronizada, sem que seja necessário instalar manualmente Python, Node.js ou bibliotecas geoespaciais.
+Smart15 runs with Docker. This means its components — GeoLibre interface, Smart15 plugin, and processing backend — are prepared and started in a standardized way without manually installing Python, Node.js, or geospatial libraries.
 
-## Visão rápida
+## Quick overview
 
-Depois que os pré-requisitos estiverem instalados, a instalação normalmente se resume a três comandos:
+Once the prerequisites are installed, setup typically comes down to three commands:
 
 ```bash
-git clone --recurse-submodules <URL_DO_REPOSITORIO>
+git clone --recurse-submodules <REPOSITORY_URL>
 cd Smart15-Acessibilidade
 ./scripts/start.sh
 ```
 
-Na primeira execução, o processo pode levar alguns minutos porque as imagens Docker precisam ser construídas.
+The first run may take a few minutes because Docker images need to be built.
 
-## Conceitos utilizados
+## Concepts used
 
-- **Terminal:** janela usada para digitar comandos no sistema operacional. No Ubuntu, pode ser aberta com `Ctrl` + `Alt` + `T`.
-- **Git:** ferramenta usada para baixar e atualizar o código-fonte do projeto.
-- **Docker:** ferramenta que executa a aplicação em contêineres isolados, com todas as dependências necessárias.
-- **Docker Compose:** componente do Docker que inicia, para e acompanha os serviços do Smart15 em conjunto.
-- **WSL2:** ambiente Linux dentro do Windows. Para usá-lo, o Docker Desktop deve estar instalado e integrado à distribuição Linux utilizada.
+- **Terminal:** window used to type commands into the operating system. On Ubuntu, open it with `Ctrl` + `Alt` + `T`.
+- **Git:** tool used to download and update the project source code.
+- **Docker:** tool that runs the application in isolated containers with all required dependencies.
+- **Docker Compose:** Docker component that starts, stops, and manages Smart15 services together.
+- **WSL2:** Linux environment inside Windows. To use it, Docker Desktop must be installed and integrated with the Linux distribution.
 
-## 1. Pré-requisitos
+## 1. Prerequisites
 
-São necessários:
+Required:
 
 - Git;
 - Docker;
@@ -35,11 +35,11 @@ São necessários:
 - `ss`;
 - `timeout`.
 
-O usuário que executará a instalação também precisa ter permissão para usar Docker.
+The user running the installation must also have permission to use Docker.
 
-### Instalação em Ubuntu ou Debian
+### Installation on Ubuntu or Debian
 
-Atualize a lista de pacotes e instale as ferramentas básicas:
+Update the package list and install the basic tools:
 
 ```bash
 sudo apt update
@@ -53,19 +53,19 @@ sudo apt install -y \
   docker-compose-plugin
 ```
 
-Adicione o usuário atual ao grupo do Docker:
+Add the current user to the Docker group:
 
 ```bash
 sudo usermod -aG docker $USER
 ```
 
-Após esse comando, encerre a sessão do Linux e entre novamente. Em WSL2, feche a distribuição e abra-a outra vez.
+After this command, log out of Linux and log back in. In WSL2, close the distribution and open it again.
 
-> Sem essa etapa, pode ser necessário usar `sudo` antes dos comandos Docker.
+> Without this step, you may need to use `sudo` before Docker commands.
 
-### Verificar o ambiente
+### Verify the environment
 
-Execute os comandos abaixo. Cada um deve exibir uma versão instalada:
+Run the commands below. Each should display an installed version:
 
 ```bash
 git --version
@@ -73,73 +73,73 @@ docker --version
 docker compose version
 ```
 
-Também é possível verificar se o Docker está funcionando:
+You can also check if Docker is working:
 
 ```bash
 docker run hello-world
 ```
 
-## 2. Baixar o projeto
+## 2. Download the project
 
-No terminal, vá até a pasta em que deseja guardar o sistema e execute:
+In the terminal, go to the folder where you want to keep the system and run:
 
 ```bash
-git clone --recurse-submodules <URL_DO_REPOSITORIO>
+git clone --recurse-submodules <REPOSITORY_URL>
 cd Smart15-Acessibilidade
 ```
 
-Substitua `<URL_DO_REPOSITORIO>` pelo endereço do repositório Git fornecido pela equipe do projeto.
+Replace `<REPOSITORY_URL>` with the Git repository address provided by the project team.
 
-A opção `--recurse-submodules` baixa também o GeoLibre, componente que fornece a interface geoespacial utilizada pelo Smart15.
+The `--recurse-submodules` option also downloads GeoLibre, the component that provides the geospatial interface used by Smart15.
 
-## 3. Iniciar a aplicação
+## 3. Start the application
 
-Dentro da pasta `Smart15-Acessibilidade`, execute:
+Inside the `Smart15-Acessibilidade` folder, run:
 
 ```bash
 ./scripts/start.sh
 ```
 
-O script automatiza a preparação do ambiente. Ele realiza:
+The script automates environment preparation. It performs:
 
-1. Validação dos pré-requisitos;
-2. Criação do arquivo de configuração `.env`, quando necessário;
-3. Inicialização do GeoLibre;
-4. Compilação do plugin Smart15;
-5. Sincronização do plugin com o GeoLibre;
-6. Validação da configuração Docker Compose;
-7. Verificação de conflitos de portas;
-8. Construção das imagens Docker;
-9. Inicialização dos contêineres;
-10. Verificação de saúde do backend e da interface;
-11. Apresentação dos endereços de acesso.
+1. prerequisite validation;
+2. creation of the `.env` configuration file when needed;
+3. GeoLibre initialization;
+4. Smart15 plugin compilation;
+5. plugin synchronization with GeoLibre;
+6. Docker Compose configuration validation;
+7. port conflict checks;
+8. Docker image build;
+9. container startup;
+10. backend and interface health checks;
+11. presentation of access addresses.
 
-Ao final, a aplicação estará disponível nos endereços padrão:
+At the end, the application will be available at the default addresses:
 
-- **Aplicação Smart15:** <http://localhost:8080>
-- **Backend técnico:** <http://localhost:8000>
-- **Documentação técnica da API:** <http://localhost:8000/docs>
+- **Smart15 application:** <http://localhost:8080>
+- **Technical backend:** <http://localhost:8000>
+- **API technical documentation:** <http://localhost:8000/docs>
 
-Quando a aplicação estiver em um servidor, substitua `localhost` pelo endereço IP ou nome do servidor. Exemplo:
+When the application is deployed on a server, replace `localhost` with the server IP or hostname. Example:
 
 ```text
 http://192.168.1.50:8080
 ```
 
-Para o uso normal do sistema, deve-se acessar a aplicação pela porta `8080`.
+For normal use, access the application on port `8080`.
 
-## 4. Configuração de portas
+## 4. Port configuration
 
-As portas externas são definidas no arquivo `.env`:
+External ports are defined in the `.env` file:
 
 ```dotenv
 SMART15_BACKEND_PORT=8000
 SMART15_WEB_PORT=8080
 ```
 
-Na primeira execução, o arquivo `.env` é criado automaticamente a partir de `.env.example`.
+On first run, the `.env` file is created automatically from `.env.example`.
 
-Caso a porta padrão já esteja em uso, é possível iniciar temporariamente em outras portas:
+If the default port is already in use, you can temporarily start on other ports:
 
 ```bash
 SMART15_BACKEND_PORT=8001 \
@@ -147,15 +147,15 @@ SMART15_WEB_PORT=8081 \
 ./scripts/start.sh
 ```
 
-Nesse exemplo, a aplicação será acessada em:
+In this example, the application will be accessible at:
 
 ```text
 http://localhost:8081
 ```
 
-## Operação diária
+## Daily operation
 
-### Verificar se o sistema está em execução
+### Check if the system is running
 
 ```bash
 docker compose \
@@ -164,14 +164,14 @@ docker compose \
   ps
 ```
 
-Os serviços esperados são:
+Expected services are:
 
-- `backend`: serviço que executa o processamento das simulações;
-- `geolibre`: interface web do Smart15.
+- `backend`: service that runs simulation processing;
+- `geolibre`: Smart15 web interface.
 
-O estado `running` ou `Up` indica que o serviço está em execução.
+The `running` or `Up` state indicates the service is active.
 
-### Acompanhar mensagens do sistema
+### Follow system logs
 
 ```bash
 docker compose \
@@ -180,9 +180,9 @@ docker compose \
   logs -f
 ```
 
-Para sair da visualização dos logs, pressione `Ctrl` + `C`.
+To exit log view, press `Ctrl` + `C`.
 
-### Parar a aplicação
+### Stop the application
 
 ```bash
 docker compose \
@@ -191,17 +191,17 @@ docker compose \
   down
 ```
 
-Esse comando interrompe a aplicação, mas preserva os arquivos do projeto e as imagens Docker.
+This command stops the application but preserves project files and Docker images.
 
-### Iniciar novamente
+### Start again
 
 ```bash
 ./scripts/start.sh
 ```
 
-### Reconstruir o ambiente
+### Rebuild the environment
 
-Use este procedimento quando houver atualização do projeto ou necessidade de reconstruir os contêineres:
+Use this procedure when the project is updated or containers need to be rebuilt:
 
 ```bash
 docker compose \
@@ -212,25 +212,25 @@ docker compose \
 ./scripts/start.sh
 ```
 
-## Problemas comuns
+## Common issues
 
-### O comando `git`, `docker` ou `docker compose` não foi encontrado
+### `git`, `docker`, or `docker compose` command not found
 
-Isso indica que a ferramenta correspondente não está instalada ou que o terminal precisa ser reaberto após a instalação. Refaça a seção [Pré-requisitos](#1-pré-requisitos).
+This indicates the corresponding tool is not installed or the terminal needs to be reopened after installation. Repeat the [Prerequisites](#1-prerequisites) section.
 
-### Erro de permissão ao executar Docker
+### Permission error running Docker
 
-Se aparecer uma mensagem de permissão negada ao executar Docker, verifique se o usuário foi adicionado ao grupo `docker`:
+If a permission denied message appears when running Docker, check whether the user was added to the `docker` group:
 
 ```bash
 sudo usermod -aG docker $USER
 ```
 
-Depois, encerre a sessão e entre novamente no sistema.
+Then log out and log back into the system.
 
-### Porta em uso
+### Port in use
 
-Altere as portas no arquivo `.env` ou informe valores temporários:
+Change the ports in the `.env` file or use temporary values:
 
 ```bash
 SMART15_BACKEND_PORT=8001 \
@@ -238,22 +238,22 @@ SMART15_WEB_PORT=8081 \
 ./scripts/start.sh
 ```
 
-### A aplicação não abre em outro computador da rede
+### The application does not open from another computer on the network
 
-Verifique:
+Check:
 
-1. Se a aplicação foi iniciada corretamente;
-2. Se o endereço IP do servidor foi utilizado no navegador;
-3. Se a porta configurada está liberada no firewall e na rede local;
-4. Se os serviços aparecem como `running` no comando `docker compose ... ps`.
+1. whether the application started correctly;
+2. whether the server IP address was used in the browser;
+3. whether the configured port is allowed by the firewall and local network;
+4. whether services appear as `running` in the `docker compose ... ps` command.
 
-### Plugin desatualizado no navegador
+### Outdated plugin in the browser
 
-Esta orientação é voltada à equipe técnica, após atualização do plugin:
+This guidance is intended for the technical team after the plugin is updated:
 
-1. Abra o console do navegador;
-2. Execute o comando abaixo;
-3. Recarregue a página com `Ctrl` + `Shift` + `R`.
+1. open the browser console;
+2. run the command below;
+3. reload the page with `Ctrl` + `Shift` + `R`.
 
 ```javascript
 localStorage.removeItem('geolibre.pluginBundlePins')

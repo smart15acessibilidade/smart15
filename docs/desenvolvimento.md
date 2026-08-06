@@ -1,49 +1,49 @@
-# Desenvolvimento do Smart15
+# Smart15 Development
 
-## Componentes principais
+## Main components
 
-O projeto possui três componentes centrais:
+The project has three central components:
 
-- `backend/`: API FastAPI e processamento geoespacial;
-- `plugin/`: código-fonte do plugin Smart15;
-- `geolibre/`: submódulo da plataforma GeoLibre.
+- `backend/`: FastAPI API and geospatial processing;
+- `plugin/`: Smart15 plugin source code;
+- `geolibre/`: GeoLibre platform submodule.
 
-A infraestrutura de execução fica em `deploy/`, e os scripts auxiliares ficam em `scripts/`.
+The runtime infrastructure is in `deploy/`, and auxiliary scripts are in `scripts/`.
 
-## Desenvolvimento do plugin
+## Plugin development
 
-O plugin utiliza TypeScript, Vite e componentes integrados à interface do GeoLibre.
+The plugin uses TypeScript, Vite, and components integrated with the GeoLibre interface.
 
-Para instalar as dependências do projeto:
+To install project dependencies:
 
 ```bash
 npm install
 ```
 
-Para compilar e sincronizar o plugin com o GeoLibre:
+To build and sync the plugin with GeoLibre:
 
 ```bash
 ./scripts/build-plugin.sh
 ```
 
-O script:
+The script:
 
-1. compila o bundle;
-2. remove a versão anteriormente sincronizada;
-3. cria a estrutura de destino;
-4. copia o manifesto;
-5. copia o bundle;
-6. valida os arquivos resultantes.
+1. builds the bundle;
+2. removes the previously synced version;
+3. creates the target structure;
+4. copies the manifest;
+5. copies the bundle;
+6. validates the resulting files.
 
-Destino do plugin:
+Plugin target location:
 
 ```text
 geolibre/apps/geolibre-desktop/public/plugins/smart15-orquestrador/
 ```
 
-## Execução integrada
+## Integrated execution
 
-Para compilar o plugin, construir as imagens e iniciar todo o ambiente:
+To build the plugin, build the images, and start the entire environment:
 
 ```bash
 ./scripts/start.sh
@@ -51,28 +51,28 @@ Para compilar o plugin, construir as imagens e iniciar todo o ambiente:
 
 ## Backend
 
-O backend é implementado em Python com FastAPI.
+The backend is implemented in Python with FastAPI.
 
-Principais responsabilidades:
+Main responsibilities:
 
-- obtenção e tratamento de dados geoespaciais;
-- processamento de modelos digitais de elevação;
-- cálculo de declividade;
-- tratamento de dados térmicos e de vegetação;
-- construção e análise da rede viária;
-- geração de isócronas e grades;
-- exportação dos resultados;
-- disponibilização dos arquivos gerados.
+- obtaining and processing geospatial data;
+- processing digital elevation models;
+- slope calculation;
+- handling thermal and vegetation data;
+- building and analyzing the road network;
+- generating isochrones and grids;
+- exporting results;
+- making generated files available.
 
-A documentação interativa da API fica disponível em:
+The interactive API documentation is available at:
 
 ```text
 http://localhost:8000/docs
 ```
 
-ou na porta configurada em `SMART15_BACKEND_PORT`.
+or on the port configured in `SMART15_BACKEND_PORT`.
 
-## Estrutura relevante
+## Relevant structure
 
 ```text
 Smart15-Acessibilidade/
@@ -92,33 +92,33 @@ Smart15-Acessibilidade/
 └── README.md
 ```
 
-## Submódulo GeoLibre
+## GeoLibre submodule
 
-Para inicializar ou atualizar manualmente o submódulo:
+To initialize or update the submodule manually:
 
 ```bash
 git submodule update --init --recursive
 ```
 
-Para consultar o commit utilizado:
+To check the commit in use:
 
 ```bash
 git submodule status
 ```
 
-Alterações no GeoLibre devem ser tratadas separadamente das alterações do repositório principal.
+Changes in GeoLibre should be handled separately from changes in the main repository.
 
-## Cache do plugin
+## Plugin cache
 
-Caso o GeoLibre carregue uma versão anterior do bundle, execute no console do navegador:
+If GeoLibre loads an older bundle version, run in the browser console:
 
 ```javascript
 localStorage.removeItem('geolibre.pluginBundlePins')
 ```
 
-Depois, recarregue a página com `Ctrl+Shift+R`.
+Then reload the page with `Ctrl+Shift+R`.
 
-## Validações antes de um commit
+## Pre-commit validations
 
 ```bash
 git status
@@ -127,12 +127,12 @@ git diff
 ./scripts/start.sh
 ```
 
-Após a inicialização, verifique:
+After startup, verify:
 
-- aplicação web;
-- endpoint `/health` do backend;
-- documentação `/docs`;
-- carregamento do plugin;
-- execução de uma simulação;
-- geração e abertura do relatório;
-- exportação dos resultados.
+- web application;
+- backend `/health` endpoint;
+- `/docs` documentation;
+- plugin loading;
+- simulation execution;
+- report generation and opening;
+- result export.

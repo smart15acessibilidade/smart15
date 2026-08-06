@@ -1,178 +1,178 @@
-# ADR-001 — Uso do GeoLibre como plataforma web do Smart-15
+# ADR-001 — Using GeoLibre as the Smart-15 Web Platform
 
 ## Status
 
-Aceito.
+Accepted.
 
-## Data
+## Date
 
 2026-07-18.
 
-## Contexto
+## Context
 
-O Smart-15 é uma plataforma de análise de acessibilidade urbana baseada no conceito de Cidade de 15 Minutos.
+Smart-15 is an urban accessibility analysis platform based on the 15-Minute City concept.
 
-A solução precisa permitir que o usuário:
+The solution must allow the user to:
 
-- selecione uma área de estudo;
-- configure um perfil de mobilidade;
-- execute uma análise geoespacial;
-- visualize camadas, isócronas e pontos de interesse;
-- compare cenários;
-- exporte resultados;
-- gere relatórios técnicos.
+- select a study area;
+- configure a mobility profile;
+- perform a geospatial analysis;
+- visualize layers, isochrones, and points of interest;
+- compare scenarios;
+- export results;
+- generate technical reports.
 
-A versão anterior do projeto estava mais próxima de uma aplicação desktop e de um fluxo dependente de ferramentas locais de geoprocessamento.
+The previous version of the project was closer to a desktop application and relied on local geoprocessing tools.
 
-Para a nova versão, foi definido que o sistema deve ser acessível pelo navegador, sem exigir que o usuário instale software geoespacial em sua estação de trabalho.
+For the new version, it was determined that the system should be accessible through a browser without requiring the user to install geospatial software on their workstation.
 
-O projeto já utiliza funcionalidades de visualização cartográfica, manipulação de camadas e renderização WebGL que podem ser atendidas pelo GeoLibre.
+The project already uses map visualization, layer handling, and WebGL rendering features that can be supported by GeoLibre.
 
-O GeoLibre oferece uma base web para visualização geoespacial e permite a extensão da interface por meio de plugins.
+GeoLibre provides a web-based foundation for geospatial visualization and allows the interface to be extended through plugins.
 
-## Decisão
+## Decision
 
-O GeoLibre será utilizado como plataforma web e cartográfica do Smart-15.
+GeoLibre will be used as the web and mapping platform for Smart-15.
 
-O projeto Smart-15 será integrado a um fork do GeoLibre mantido pela organização GeoSmart.
+The Smart-15 project will be integrated into a GeoLibre fork maintained by the GeoSmart organization.
 
-O fork será utilizado para:
+The fork will be used to:
 
-- controlar a versão do GeoLibre adotada pelo projeto;
-- integrar o plugin Smart-15;
-- ajustar o processo de build;
-- configurar a aplicação para implantação;
-- aplicar eventuais adaptações de interface e identidade visual.
+- control the GeoLibre version adopted by the project;
+- integrate the Smart-15 plugin;
+- adjust the build process;
+- configure the application for deployment;
+- apply interface and visual identity adaptations as needed.
 
-A lógica de negócio específica do Smart-15 não será incorporada diretamente ao núcleo do GeoLibre.
+Smart-15 specific business logic will not be incorporated directly into the GeoLibre core.
 
-A interface específica será implementada por meio do plugin Smart-15, enquanto o processamento geoespacial será realizado por um backend separado.
+The Smart-15 specific interface will be implemented through the Smart-15 plugin, while geospatial processing will be performed by a separate backend.
 
-## Arquitetura resultante
+## Resulting Architecture
 
-A solução será organizada da seguinte forma:
+The solution will be organized as follows:
 
 ```text
-Usuário
+User
    │
    ▼
 GeoLibre Web
    │
    ▼
-Plugin Smart-15
+Smart-15 Plugin
    │
    ▼
 Smart-15 API
    │
    ▼
-Motor Geoespacial
+Geospatial Engine
 ```
-O GeoLibre será responsável principalmente por:
+GeoLibre will be primarily responsible for:
 
-- fornecer a aplicação web;
-- apresentar o mapa;
-- controlar camadas;
-- permitir interação com objetos geográficos;
-- executar o plugin Smart-15;
-- renderizar os resultados recebidos da API.
+- providing the web application;
+- displaying the map;
+- managing layers;
+- enabling interaction with geographic objects;
+- running the Smart-15 plugin;
+- rendering results received from the API.
 
-## Alternativas consideradas
-### Desenvolver uma aplicação web cartográfica do zero
+## Alternatives Considered
+### Developing a mapping web application from scratch
 
-Essa alternativa daria maior liberdade sobre a interface e a arquitetura.
+This alternative would provide greater freedom over the interface and architecture.
 
-Entretanto, exigiria implementar novamente recursos já existentes, como:
+However, it would require reimplementing already existing features, such as:
 
-- gerenciamento de mapa;
-- carregamento de camadas;
-- controles cartográficos;
-- navegação;
-- renderização WebGL;
-- integração com formatos geoespaciais;
-- gerenciamento de plugins.
+- map management;
+- layer loading;
+- map controls;
+- navigation;
+- WebGL rendering;
+- integration with geospatial formats;
+- plugin management.
 
-Essa opção aumentaria o prazo, o esforço de desenvolvimento e o risco do projeto.
+This option would increase the timeline, development effort, and project risk.
 
-### Manter o projeto apenas como aplicação desktop
+### Keeping the project only as a desktop application
 
-Essa alternativa reduziria alterações na arquitetura existente.
+This alternative would reduce changes to the existing architecture.
 
-Entretanto, apresentaria limitações importantes:
+However, it would present significant limitations:
 
-- necessidade de instalação local;
-- maior dificuldade de atualização;
-- dependência do ambiente do usuário;
-- menor facilidade de demonstração;
-- maior complexidade para disponibilização institucional;
-- dificuldade de acesso por diferentes dispositivos.
+- the need for local installation;
+- greater difficulty updating;
+- dependence on the user’s environment;
+- less ease of demonstration;
+- greater complexity for institutional availability;
+- difficulty accessing from different devices.
 
-### Modificar diretamente o núcleo do GeoLibre
+### Modifying GeoLibre core directly
 
-Essa alternativa permitiria inserir o Smart-15 diretamente no código principal da plataforma.
+This alternative would allow Smart-15 to be inserted directly into the platform’s main codebase.
 
-Entretanto, aumentaria o acoplamento entre o projeto e o GeoLibre, dificultando:
+However, it would increase coupling between the project and GeoLibre, making it harder to:
 
-- atualização a partir do projeto original;
-- manutenção;
-- identificação das alterações do Smart-15;
-- reutilização do plugin;
-- isolamento de falhas.
+- update from the original project;
+- maintain;
+- identify Smart-15 changes;
+- reuse the plugin;
+- isolate failures.
 
-## Consequências positivas
-- Redução do esforço para construir a interface cartográfica.
-- Disponibilização do sistema por navegador.
-- Reaproveitamento de recursos existentes no GeoLibre.
-- Separação entre plataforma cartográfica e lógica específica do Smart-15.
-- Possibilidade de atualização do fork a partir do projeto original.
-- Melhor rastreabilidade das alterações.
-- Maior facilidade de implantação em servidor.
-- Facilidade para demonstração e uso pela universidade.
+## Positive Consequences
+- Reduced effort to build the mapping interface.
+- Availability of the system through a browser.
+- Reuse of existing GeoLibre resources.
+- Separation between the mapping platform and Smart-15 specific logic.
+- Possibility of updating the fork from the original project.
+- Better traceability of changes.
+- Greater ease of deployment to a server.
+- Easier demonstration and use by the university.
 
-## Consequências negativas
-- Dependência tecnológica do GeoLibre.
-- Necessidade de acompanhar mudanças no projeto original.
-- Possíveis incompatibilidades entre novas versões do GeoLibre e o plugin.
-- Necessidade de manter um fork.
-- Parte da arquitetura e do ciclo de build será determinada pelo GeoLibre.
+## Negative Consequences
+- Technological dependence on GeoLibre.
+- Need to follow changes in the original project.
+- Possible incompatibilities between new GeoLibre versions and the plugin.
+- Need to maintain a fork.
+- Part of the architecture and build cycle will be determined by GeoLibre.
 
-## Riscos
-### Mudanças incompatíveis no GeoLibre
+## Risks
+### Incompatible changes in GeoLibre
 
-Novas versões podem alterar a API de plugins ou o processo de build.
+New versions may change the plugin API or the build process.
 
-Mitigação:
+Mitigation:
 
-- fixar uma versão do GeoLibre para cada release do Smart-15;
-- utilizar tags;
-- atualizar o fork de forma controlada;
-- testar a integração antes de incorporar novas versões.
+- lock a GeoLibre version for each Smart-15 release;
+- use tags;
+- update the fork in a controlled manner;
+- test the integration before incorporating new versions.
 
-### Crescimento excessivo das alterações no fork
+### Excessive growth of fork changes
 
-Muitas alterações no núcleo podem dificultar a sincronização com o projeto original.
+Too many core changes may make synchronization with the original project difficult.
 
-Mitigação:
+Mitigation:
 
-- manter a lógica Smart-15 no plugin e no backend;
-- evitar alterações desnecessárias no núcleo;
-- documentar cada modificação realizada no fork.
+- keep Smart-15 logic in the plugin and backend;
+- avoid unnecessary core changes;
+- document every modification made in the fork.
 
-### Critérios de validação
+### Validation criteria
 
-A decisão será considerada validada quando:
+The decision will be considered validated when:
 
-- o GeoLibre Web puder ser executado localmente;
-- o plugin Smart-15 puder ser carregado;
-- o plugin puder adicionar painéis e camadas;
-- o plugin puder chamar a API Smart-15;
-- os resultados da API puderem ser apresentados no mapa;
-- a aplicação puder ser construída para implantação em servidor.
+- GeoLibre Web can run locally;
+- the Smart-15 plugin can be loaded;
+- the plugin can add panels and layers;
+- the plugin can call the Smart-15 API;
+- API results can be displayed on the map;
+- the application can be built for server deployment.
 
-### Revisão da decisão
+### Decision review
 
-Esta decisão deve ser revisada caso:
+This decision should be reviewed if:
 
-- o GeoLibre deixe de atender aos requisitos essenciais;
-- a API de plugins se torne inviável para o projeto;
-- o custo de manutenção do fork supere o benefício de reutilização;
-- seja definida uma nova plataforma institucional obrigatória.
+- GeoLibre no longer meets the essential requirements;
+- the plugin API becomes unviable for the project;
+- the fork maintenance cost outweighs the benefit of reuse;
+- a new mandatory institutional platform is defined.
