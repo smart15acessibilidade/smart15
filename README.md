@@ -15,7 +15,9 @@ The platform is built on [GeoLibre](https://github.com/opengeos/GeoLibre) and co
 
 ## Demonstration
 
-<video src="https://github.com/user-attachments/assets/db3433ff-69a3-4e4b-ba6c-fbabf08c8604" controls="controls" style="max-width: 100%;"></video>
+<video src="
+https://github.com/user-attachments/assets/2dae4194-4946-4f53-a218-bbdd9836a102
+" controls="controls" style="max-width: 100%;"></video>
 
 > If the video does not display directly, access the file through the repository attachments area on GitHub.
 
