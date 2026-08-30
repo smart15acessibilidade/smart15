@@ -93,6 +93,7 @@ Smart15-Acessibilidade/
 
 - **Leandro Gregório** — design, architecture, and development;
 - **Fábio Gregório** — development, integration, reports, testing, and documentation.
+- **André Costa** - idealization, concept and reviewer
 
 ## Base Project
 
