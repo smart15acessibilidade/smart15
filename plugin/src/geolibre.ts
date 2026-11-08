@@ -2,6 +2,12 @@
 import { openPrintableReport } from "./report/report.generator";
 import { adaptSimulationToReport } from "./report/report.adapter";
 import { captureMapAsDataUrl } from "./report/map.capture";
+import {
+  createCoordinateTransformer,
+  normalizePointGeoJSON,
+  parseDecimalDegrees,
+  polygonGeoJSONCoversPoint,
+} from "./lib/geospatial";
 
 import {
   getLocale,
@@ -248,6 +254,41 @@ const painelHtml = `
       </div>
       <div id="areaStatus" class="s15-text" data-i18n="area.noneDefined" style="font-size: 11px; margin-top: 6px; font-style: italic;">Nenhum limite definido</div>
       <div id="areaCoords" style="font-family: monospace; font-size: 10px; color: #c05621; margin-top: 4px; word-break: break-all;"></div>
+    </div>
+
+    <div style="margin-bottom: 24px; border-top: 1px solid; padding-top: 16px;" class="s15-border">
+      <label class="s15-label" data-i18n="origin.section" style="font-weight: bold; font-size: 13px; display: block; margin-bottom: 6px;">Ponto inicial da simulação</label>
+      <div class="s15-text" data-i18n="origin.boundaryNotice" style="font-size: 10px; line-height: 1.5; background: #fffaf0; border: 1px solid #f6ad55; border-radius: 4px; padding: 8px; margin-bottom: 8px;">O polígono acima é obrigatório em todos os modos e limita a simulação. O ponto inicial precisa estar dentro dele; resultados fora do limite são recortados.</div>
+      <select id="startPointMode" class="s15-border s15-card s15-text" style="width: 100%; padding: 7px; border-radius: 4px; border-width: 1px; font-size: 11px; margin-bottom: 8px;">
+        <option value="centroid" data-i18n="origin.mode.centroid">Centroide do polígono</option>
+        <option value="map" data-i18n="origin.mode.map">Clicar no mapa (dentro do polígono)</option>
+        <option value="coordinates" data-i18n="origin.mode.coordinates">Latitude e longitude (graus decimais)</option>
+        <option value="address" data-i18n="origin.mode.address">Endereço (OpenStreetMap)</option>
+        <option value="file" data-i18n="origin.mode.file">Arquivo de pontos</option>
+      </select>
+      <div id="startPointCoordinateFields" style="display:none;">
+        <div class="s15-text" data-i18n="origin.decimalHelp" style="font-size: 10px; margin-bottom: 6px;">Informe latitude e longitude em campos separados e use ponto (.) como separador decimal; ex.: -23.55052. Não use vírgula decimal.</div>
+        <label class="s15-text" data-i18n="origin.latitude" style="display:block; font-size:10px; margin-bottom:3px;">Latitude (graus decimais)</label>
+        <input id="startLatitude" type="text" inputmode="decimal" placeholder="-23.55052" class="s15-border s15-text" style="width:100%; box-sizing:border-box; padding:6px; margin-bottom:6px;">
+        <label class="s15-text" data-i18n="origin.longitude" style="display:block; font-size:10px; margin-bottom:3px;">Longitude (graus decimais)</label>
+        <input id="startLongitude" type="text" inputmode="decimal" placeholder="-46.633308" class="s15-border s15-text" style="width:100%; box-sizing:border-box; padding:6px;">
+      </div>
+      <div id="startPointAddressFields" style="display:none;">
+        <label for="startAddressQuery" class="s15-text" data-i18n="origin.addressLabel" style="display:block; font-size:10px; margin-bottom:3px;">Pesquise um endereço (busca manual; não é preenchimento automático)</label>
+        <div style="display:flex; gap:4px;">
+          <input id="startAddressQuery" type="search" maxlength="200" class="s15-border s15-text" style="min-width:0; flex:1; padding:6px;" placeholder="Rua, número, cidade" data-i18n-placeholder="origin.addressPlaceholder">
+          <button id="btnSearchAddress" class="s15-btn-normal" type="button" data-i18n="origin.search" style="padding:6px; border-radius:4px; cursor:pointer;">Buscar</button>
+        </div>
+        <select id="startAddressResults" class="s15-border s15-text" style="display:none; width:100%; margin-top:6px; padding:6px;" aria-label="Resultados de endereço" data-i18n-aria-label="origin.addressLabel"></select>
+        <div class="s15-text" data-i18n="origin.osmAttribution" style="font-size:9px; margin-top:5px;">Geocodificação: OpenStreetMap / Nominatim. Dados © OpenStreetMap contributors.</div>
+      </div>
+      <div id="startPointFileFields" style="display:none;">
+        <input type="file" id="startPointFileInput" accept=".geojson,.json,application/geo+json,application/json" style="display:none;">
+        <button id="btnUploadStartPoints" type="button" class="s15-btn-normal" data-i18n="origin.uploadPoints" style="width:100%; padding:7px; border-radius:4px; cursor:pointer;">Carregar pontos (GeoJSON)</button>
+        <div class="s15-text" data-i18n="origin.fileHelp" style="font-size:10px; margin-top:5px;">Use GeoJSON Point/MultiPoint em EPSG:4326, EPSG:3857 ou EPSG:31983. Escolha um ponto por execução; depois selecione outro para repetir.</div>
+        <select id="startPointFileResults" class="s15-border s15-text" style="display:none; width:100%; margin-top:6px; padding:6px;"></select>
+      </div>
+      <div id="startPointStatus" class="s15-text" style="font-size:10px; margin-top:7px;"></div>
     </div>
 
     <div style="margin-bottom: 24px; border-top: 1px solid; padding-top: 16px;" class="s15-border">
@@ -1350,6 +1391,14 @@ const SAMPLE_CLASSES: Record<number, string> = {
 };
 
 type BBox = [number, number, number, number];
+type SimulationStartPoint = {
+    id: string;
+    label: string;
+    longitude: number;
+    latitude: number;
+};
+
+const MAX_START_POINTS = 500;
 
 let bboxCapturada: BBox | null = null;
 let geometriaGeoJSON: any = null;
@@ -1575,6 +1624,187 @@ const getMapInstance = (app: any) => {
     return null;
 };
 
+
+type GeoJSONPosition = number[];
+
+function geoJSONFeatures(input: any): any[] {
+    if (input?.type === "FeatureCollection" && Array.isArray(input.features)) {
+        return input.features;
+    }
+    if (input?.type === "Feature") return [input];
+    if (input && (input.type === "Polygon" || input.type === "MultiPolygon")) {
+        return [{ type: "Feature", properties: {}, geometry: input }];
+    }
+    throw new Error("O GeoJSON precisa conter Polygon ou MultiPolygon (Feature, FeatureCollection ou geometria).");
+}
+
+function collectGeoJSONPositions(value: any, into: GeoJSONPosition[] = []): GeoJSONPosition[] {
+    if (!Array.isArray(value)) return into;
+    if (value.length >= 2 && typeof value[0] === "number" && typeof value[1] === "number") {
+        into.push(value);
+        return into;
+    }
+    value.forEach((child) => collectGeoJSONPositions(child, into));
+    return into;
+}
+
+function normalizePolygonGeoJSON(input: any, splitMultiPolygon = false): any {
+    const features = geoJSONFeatures(input);
+    const positions = features.flatMap((feature) =>
+        collectGeoJSONPositions(feature?.geometry?.coordinates, []),
+    );
+    if (positions.length === 0) {
+        throw new Error("O GeoJSON não contém coordenadas de polígono.");
+    }
+
+    const transformPosition = createCoordinateTransformer(input, positions);
+
+    const normalizeRing = (ring: any): number[][] | null => {
+        if (!Array.isArray(ring)) return null;
+        const converted: number[][] = [];
+        for (const position of ring) {
+            if (!Array.isArray(position) || position.length < 2) return null;
+            converted.push(transformPosition(position));
+        }
+        if (converted.length < 3) return null;
+        const first = converted[0];
+        const last = converted[converted.length - 1];
+        if (first[0] !== last[0] || first[1] !== last[1]) {
+            converted.push([...first]);
+        }
+        return converted.length >= 4 ? converted : null;
+    };
+
+    const normalizePolygonCoordinates = (coordinates: any): number[][][] | null => {
+        if (!Array.isArray(coordinates) || coordinates.length === 0) return null;
+        const outer = normalizeRing(coordinates[0]);
+        if (!outer) return null;
+        const holes = coordinates.slice(1)
+            .map(normalizeRing)
+            .filter((ring): ring is number[][] => ring !== null);
+        return [outer, ...holes];
+    };
+
+    const normalizedFeatures: any[] = [];
+    for (const feature of features) {
+        const geometry = feature?.geometry;
+        if (!geometry) continue;
+        const properties = feature.properties && typeof feature.properties === "object"
+            ? { ...feature.properties }
+            : {};
+        const featureId = feature.id === undefined ? {} : { id: feature.id };
+
+        if (geometry.type === "Polygon") {
+            const coordinates = normalizePolygonCoordinates(geometry.coordinates);
+            if (coordinates) {
+                normalizedFeatures.push({
+                    type: "Feature", ...featureId, properties,
+                    geometry: { type: "Polygon", coordinates },
+                });
+            }
+        } else if (geometry.type === "MultiPolygon" && Array.isArray(geometry.coordinates)) {
+            const polygons = geometry.coordinates
+                .map(normalizePolygonCoordinates)
+                .filter((polygon: number[][][] | null): polygon is number[][][] => polygon !== null);
+            if (polygons.length > 0) {
+                if (splitMultiPolygon) {
+                    for (const coordinates of polygons) {
+                        normalizedFeatures.push({
+                            type: "Feature", ...featureId, properties: { ...properties },
+                            geometry: { type: "Polygon", coordinates },
+                        });
+                    }
+                } else {
+                    normalizedFeatures.push({
+                        type: "Feature", ...featureId, properties,
+                        geometry: { type: "MultiPolygon", coordinates: polygons },
+                    });
+                }
+            }
+        }
+    }
+
+    if (normalizedFeatures.length === 0) {
+        throw new Error("Nenhuma feição Polygon/MultiPolygon com anel válido foi encontrada.");
+    }
+    // GeoJSON RFC 7946 usa coordenadas WGS84; removemos CRS legado após reprojetar.
+    return { type: "FeatureCollection", features: normalizedFeatures };
+}
+
+const SAMPLE_CLASS_ALIASES: Record<string, number> = {
+    asfalto: 1, asphalt: 1, road: 1, rua: 1, via: 1, viario: 1, pavimento: 1,
+    calcada: 2, sidewalk: 2, passeio: 2,
+    construcao: 3, building: 3, edificacao: 3, telhado: 3, casa: 3, predio: 3,
+    arvore: 4, arvores: 4, tree: 4, trees: 4, floresta: 4, forest: 4, mata: 4,
+    vegetacao: 4, arborea: 4,
+    grama: 5, graminea: 5, grass: 5, pasture: 5, pasto: 5, rasteira: 5,
+    solo: 6, terra: 6, soil: 6, terraexposta: 6, baresoil: 6, soloexposto: 6,
+};
+
+function normalizeSampleClassName(value: unknown): string {
+    return String(value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "");
+}
+
+function normalizeSampleFeatures(features: any[]): SamplePolygonFeature[] {
+    const descriptors = features.map((feature, index) => {
+        const properties = feature?.properties ?? {};
+        let rawClass = properties.classe ?? properties.class ?? properties.class_name ?? properties.className;
+        if (rawClass == null || String(rawClass).trim() === "") {
+            rawClass = properties.classe_nome ?? properties.class_label ?? properties.label;
+        }
+        const classId = properties.classe_id ?? properties.class_id ?? properties.id_classe;
+        const rawText = String(rawClass ?? "").trim();
+        const labelMatch = rawText.match(/^\s*\d+\s*[-:.)]\s*(.+)$/);
+        const labelForAlias = labelMatch ? labelMatch[1] : rawText;
+        const normalized = normalizeSampleClassName(labelForAlias);
+        const numericText = /^\d+$/.test(rawText) ? Number(rawText) : NaN;
+        const explicitClassId = classId !== undefined && classId !== null && /^\d+$/.test(String(classId).trim())
+            ? Number(classId)
+            : NaN;
+        const knownClass = SAMPLE_CLASS_ALIASES[normalized];
+        const numericClass = Number.isSafeInteger(numericText) && numericText >= 0
+            ? numericText
+            : !rawText && Number.isSafeInteger(explicitClassId) && explicitClassId >= 0
+                ? explicitClassId
+                : NaN;
+        const customLabel = rawText || (Number.isSafeInteger(explicitClassId) ? `Classe ${explicitClassId}` : "Sem classe");
+        return { feature, index, knownClass, numericClass, customLabel, normalized: normalizeSampleClassName(customLabel) || "semclasse" };
+    });
+
+    const reservedIds = new Set<number>([1, 2, 3, 4, 5, 6]);
+    descriptors.forEach((item) => {
+        if (item.knownClass !== undefined) reservedIds.add(item.knownClass);
+        if (Number.isSafeInteger(item.numericClass)) reservedIds.add(item.numericClass);
+    });
+    let nextCustomId = Math.max(6, ...Array.from(reservedIds)) + 1;
+    const customIds = new Map<string, number>();
+
+    return descriptors.map((item) => {
+        let classe = item.knownClass ?? item.numericClass;
+        if (classe === undefined || !Number.isSafeInteger(classe)) {
+            if (!customIds.has(item.normalized)) {
+                while (reservedIds.has(nextCustomId)) nextCustomId++;
+                customIds.set(item.normalized, nextCustomId);
+                reservedIds.add(nextCustomId);
+                nextCustomId++;
+            }
+            classe = customIds.get(item.normalized)!;
+        }
+        const canonicalName = SAMPLE_CLASSES[classe];
+        const classeNome = canonicalName
+            ?? (item.customLabel === "Sem classe" ? `Classe ${classe}` : item.customLabel);
+        return {
+            type: "Feature",
+            properties: { classe, classe_nome: classeNome },
+            geometry: item.feature.geometry,
+        };
+    });
+}
+
 const calculateBBox = (geojson: any) => {
     let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
     const extract = (coords: any) => {
@@ -1596,7 +1826,7 @@ const calculateBBox = (geojson: any) => {
 export const plugin = {
 	id: "smart15-orquestrador",
 	name: "Smart-15: Acessibilidade",
-	version: "2.0.0",
+	version: "2.1.0",
 	urlParameterNames: [],
 	activate(app: any) {
 		if (app.registerRightPanel) {
@@ -2138,6 +2368,21 @@ export const plugin = {
                     const sampleFileInput = wrap.querySelector("#sampleFileInput") as HTMLInputElement;
                     const sampleStatus = wrap.querySelector("#sampleStatus") as HTMLDivElement;
                     const sampleCoords = wrap.querySelector("#sampleCoords") as HTMLDivElement;
+                    const startPointMode = wrap.querySelector("#startPointMode") as HTMLSelectElement;
+                    const startPointStatus = wrap.querySelector("#startPointStatus") as HTMLDivElement;
+                    const startPointCoordinateFields = wrap.querySelector("#startPointCoordinateFields") as HTMLDivElement;
+                    const startPointAddressFields = wrap.querySelector("#startPointAddressFields") as HTMLDivElement;
+                    const startPointFileFields = wrap.querySelector("#startPointFileFields") as HTMLDivElement;
+                    const startLatitudeInput = wrap.querySelector("#startLatitude") as HTMLInputElement;
+                    const startLongitudeInput = wrap.querySelector("#startLongitude") as HTMLInputElement;
+                    const startAddressQuery = wrap.querySelector("#startAddressQuery") as HTMLInputElement;
+                    const btnSearchAddress = wrap.querySelector("#btnSearchAddress") as HTMLButtonElement;
+                    const startAddressResults = wrap.querySelector("#startAddressResults") as HTMLSelectElement;
+                    const startPointFileInput = wrap.querySelector("#startPointFileInput") as HTMLInputElement;
+                    const btnUploadStartPoints = wrap.querySelector("#btnUploadStartPoints") as HTMLButtonElement;
+                    const startPointFileResults = wrap.querySelector("#startPointFileResults") as HTMLSelectElement;
+                    let uploadedStartPoints: SimulationStartPoint[] = [];
+                    let addressStartPoints: SimulationStartPoint[] = [];
                     const basemapSelect = wrap.querySelector("#basemapSelect") as HTMLSelectElement;
                     const drawSampleClass = wrap.querySelector("#drawSampleClass") as HTMLSelectElement;
                     const btnDrawSample = wrap.querySelector("#btnDrawSample") as HTMLButtonElement;
@@ -2155,6 +2400,341 @@ export const plugin = {
                     const corOsm = wrap.querySelector("#corOsm") as HTMLInputElement; 
                     const opacOsm = wrap.querySelector("#opacOsm") as HTMLInputElement; 
                     const contornoOsm = wrap.querySelector("#contornoOsm") as HTMLInputElement;
+
+                    const setStartPointStatus = (message: string, color = "#4a5568") => {
+                        startPointStatus.textContent = message;
+                        startPointStatus.style.color = color;
+                    };
+                    let clickedStartPoint: SimulationStartPoint | null = null;
+                    let startPointClickMap: any = null;
+                    let startPointCursorMap: any = null;
+                    let originalStartPointCursor = "";
+                    const clearStartPointMarker = (mapObj = getMapInstance(app)) => {
+                        const source = mapObj?.getSource?.("smart15-selected-start-point");
+                        if (source) source.setData({ type: "FeatureCollection", features: [] });
+                    };
+                    const clearClickedStartPoint = () => {
+                        clickedStartPoint = null;
+                        clearStartPointMarker();
+                    };
+                    const pointInsideBoundary = (point: SimulationStartPoint) =>
+                        Boolean(geometriaGeoJSON)
+                        && polygonGeoJSONCoversPoint(
+                            geometriaGeoJSON,
+                            point.longitude,
+                            point.latitude,
+                        );
+                    const updateStartPointMode = () => {
+                        startPointCoordinateFields.style.display = startPointMode.value === "coordinates" ? "block" : "none";
+                        startPointAddressFields.style.display = startPointMode.value === "address" ? "block" : "none";
+                        startPointFileFields.style.display = startPointMode.value === "file" ? "block" : "none";
+                        if (startPointMode.value === "centroid") {
+                            setStartPointStatus(t("origin.centroidPending"));
+                        } else if (startPointMode.value === "map") {
+                            setStartPointStatus(clickedStartPoint
+                                ? `${t("origin.pointReady")} ${clickedStartPoint.label}`
+                                : t("origin.chooseMapPoint"), clickedStartPoint ? "#2f855a" : "#4a5568");
+                        } else if (startPointMode.value === "address") {
+                            setStartPointStatus(t("origin.chooseAddress"));
+                        } else if (startPointMode.value === "file") {
+                            setStartPointStatus(uploadedStartPoints.length ? t("origin.chooseFilePoint") : "");
+                        } else {
+                            setStartPointStatus("");
+                        }
+                        updateStartPointMapBinding();
+                    };
+                    const validateStartPoint = (point: SimulationStartPoint): SimulationStartPoint => {
+                        if (!geometriaGeoJSON) {
+                            throw new Error(t("simulation.areaRequired"));
+                        }
+                        if (
+                            !Number.isFinite(point.longitude)
+                            || !Number.isFinite(point.latitude)
+                            || point.longitude < -180
+                            || point.longitude > 180
+                            || point.latitude < -90
+                            || point.latitude > 90
+                        ) {
+                            throw new Error("Longitude/latitude fora dos limites válidos.");
+                        }
+                        if (!pointInsideBoundary(point)) {
+                            throw new Error(t("origin.pointOutside"));
+                        }
+                        return point;
+                    };
+                    const getSelectedStartPoint = (): SimulationStartPoint | null => {
+                        if (startPointMode.value === "centroid") return null;
+                        if (startPointMode.value === "coordinates") {
+                            const latitude = parseDecimalDegrees(startLatitudeInput.value);
+                            const longitude = parseDecimalDegrees(startLongitudeInput.value);
+                            return validateStartPoint({
+                                id: "manual-coordinates",
+                                label: `${latitude}, ${longitude}`,
+                                longitude,
+                                latitude,
+                            });
+                        }
+                        if (startPointMode.value === "address") {
+                            if (!startAddressResults.value) throw new Error(t("origin.chooseAddress"));
+                            const selected = Number(startAddressResults.value);
+                            const point = addressStartPoints[selected];
+                            if (!point) throw new Error(t("origin.chooseAddress"));
+                            return validateStartPoint(point);
+                        }
+                        if (startPointMode.value === "file") {
+                            if (!startPointFileResults.value) throw new Error(t("origin.chooseFilePoint"));
+                            const selected = Number(startPointFileResults.value);
+                            const point = uploadedStartPoints[selected];
+                            if (!point) throw new Error(t("origin.chooseFilePoint"));
+                            return validateStartPoint(point);
+                        }
+                        if (startPointMode.value === "map") {
+                            if (!clickedStartPoint) throw new Error(t("origin.chooseMapPoint"));
+                            return validateStartPoint(clickedStartPoint);
+                        }
+                        throw new Error("Selecione um método válido para o ponto inicial.");
+                    };
+
+                    const handleStartPointMapClick = (event: any) => {
+                        if (startPointMode.value !== "map") return;
+                        if (!geometriaGeoJSON) {
+                            setStartPointStatus(t("simulation.areaRequired"), "#c53030");
+                            return;
+                        }
+                        clickedStartPoint = null;
+                        clearStartPointMarker(startPointClickMap);
+                        const longitude = Number(event?.lngLat?.lng);
+                        const latitude = Number(event?.lngLat?.lat);
+                        const point: SimulationStartPoint = {
+                            id: "map-click",
+                            label: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+                            longitude,
+                            latitude,
+                        };
+                        try {
+                            clickedStartPoint = validateStartPoint(point);
+                            const mapObj = startPointClickMap;
+                            if (mapObj) {
+                                const pointData = {
+                                    type: "FeatureCollection",
+                                    features: [{
+                                        type: "Feature",
+                                        properties: {},
+                                        geometry: { type: "Point", coordinates: [longitude, latitude] },
+                                    }],
+                                };
+                                const sourceId = "smart15-selected-start-point";
+                                const source = mapObj.getSource(sourceId);
+                                if (source) source.setData(pointData);
+                                else mapObj.addSource(sourceId, { type: "geojson", data: pointData });
+                                if (!mapObj.getLayer(`${sourceId}-circle`)) {
+                                    mapObj.addLayer({
+                                        id: `${sourceId}-circle`,
+                                        type: "circle",
+                                        source: sourceId,
+                                        paint: {
+                                            "circle-radius": 8,
+                                            "circle-color": "#e53e3e",
+                                            "circle-stroke-color": "#ffffff",
+                                            "circle-stroke-width": 2,
+                                        },
+                                    });
+                                }
+                            }
+                            setStartPointStatus(`${t("origin.pointReady")} ${point.label}`, "#2f855a");
+                        } catch (error) {
+                            setStartPointStatus(error instanceof Error ? error.message : String(error), "#c53030");
+                        }
+                    };
+                    const updateStartPointMapBinding = () => {
+                        const mapObj = getMapInstance(app);
+                        if (startPointClickMap !== mapObj) {
+                            if (startPointClickMap) {
+                                startPointClickMap.off?.("click", handleStartPointMapClick);
+                                if (startPointCursorMap === startPointClickMap) {
+                                    const previousCanvas = startPointClickMap.getCanvas?.();
+                                    if (previousCanvas) previousCanvas.style.cursor = originalStartPointCursor;
+                                    startPointCursorMap = null;
+                                }
+                            }
+                            startPointClickMap = mapObj;
+                            startPointClickMap?.on?.("click", handleStartPointMapClick);
+                        }
+                        const canvas = mapObj?.getCanvas?.();
+                        if (!canvas) return;
+                        if (startPointMode.value === "map") {
+                            if (startPointCursorMap !== mapObj) {
+                                startPointCursorMap = mapObj;
+                                originalStartPointCursor = canvas.style.cursor;
+                            }
+                            canvas.style.cursor = "crosshair";
+                        } else if (startPointCursorMap === mapObj) {
+                            canvas.style.cursor = originalStartPointCursor;
+                            startPointCursorMap = null;
+                        }
+                    };
+
+                    startPointMode.addEventListener("change", updateStartPointMode);
+                    const validateCoordinateFields = () => {
+                        if (!startLatitudeInput.value.trim() || !startLongitudeInput.value.trim()) {
+                            setStartPointStatus("");
+                            return;
+                        }
+                        try {
+                            const point = getSelectedStartPoint();
+                            if (point) setStartPointStatus(`${t("origin.pointReady")} ${point.latitude}, ${point.longitude}`, "#2f855a");
+                        } catch (error) {
+                            setStartPointStatus(error instanceof Error ? error.message : String(error), "#c53030");
+                        }
+                    };
+                    startLatitudeInput.addEventListener("change", validateCoordinateFields);
+                    startLongitudeInput.addEventListener("change", validateCoordinateFields);
+
+                    startAddressResults.addEventListener("change", () => {
+                        const point = addressStartPoints[Number(startAddressResults.value)];
+                        if (!point) return;
+                        try {
+                            validateStartPoint(point);
+                            setStartPointStatus(`${t("origin.pointReady")} ${point.label}`, "#2f855a");
+                        } catch (error) {
+                            setStartPointStatus(error instanceof Error ? error.message : String(error), "#c53030");
+                        }
+                    });
+
+                    btnSearchAddress.addEventListener("click", async () => {
+                        const query = startAddressQuery.value.trim();
+                        if (!geometriaGeoJSON || !bboxCapturada) {
+                            setStartPointStatus(t("simulation.areaRequired"), "#c53030");
+                            return;
+                        }
+                        if (query.length < 3) {
+                            setStartPointStatus(t("origin.searchMin"), "#c53030");
+                            return;
+                        }
+                        btnSearchAddress.disabled = true;
+                        startAddressResults.style.display = "none";
+                        setStartPointStatus(t("origin.searching"));
+                        try {
+                            const params = new URLSearchParams({
+                                query,
+                                bbox: bboxCapturada.join(","),
+                            });
+                            const response = await fetch(`/api/geocode?${params.toString()}`);
+                            const payload = await response.json();
+                            if (!response.ok) {
+                                throw new Error(payload.detail || "Falha ao consultar o serviço de endereços.");
+                            }
+                            addressStartPoints = (payload.results ?? []).map((result: any, index: number) => ({
+                                id: String(result.id ?? `nominatim-${index}`),
+                                label: String(result.label ?? `${result.latitude}, ${result.longitude}`),
+                                longitude: Number(result.longitude),
+                                latitude: Number(result.latitude),
+                            }));
+                            startAddressResults.replaceChildren();
+                            const placeholder = document.createElement("option");
+                            placeholder.value = "";
+                            placeholder.textContent = addressStartPoints.length
+                                ? t("origin.addressResultPlaceholder")
+                                : t("origin.addressNoResults");
+                            startAddressResults.appendChild(placeholder);
+                            addressStartPoints.forEach((point, index) => {
+                                const option = document.createElement("option");
+                                option.value = String(index);
+                                option.textContent = point.label;
+                                startAddressResults.appendChild(option);
+                            });
+                            startAddressResults.value = "";
+                            startAddressResults.style.display = "block";
+                            setStartPointStatus(addressStartPoints.length
+                                ? t("origin.chooseAddress")
+                                : t("origin.addressNotFound"),
+                            addressStartPoints.length ? "#4a5568" : "#c53030");
+                        } catch (error) {
+                            setStartPointStatus(error instanceof Error ? error.message : String(error), "#c53030");
+                        } finally {
+                            btnSearchAddress.disabled = false;
+                        }
+                    });
+
+                    btnUploadStartPoints.addEventListener("click", () => startPointFileInput.click());
+                    startPointFileInput.addEventListener("change", (event: any) => {
+                        const file = event.target.files?.[0] as File | undefined;
+                        if (!file) return;
+                        if (file.size > 10 * 1024 * 1024) {
+                            setStartPointStatus(t("origin.fileTooLarge"), "#c53030");
+                            startPointFileInput.value = "";
+                            return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = (loadEvent: any) => {
+                            try {
+                                const parsed = JSON.parse(String(loadEvent.target?.result ?? "").replace(/^\uFEFF/, ""));
+                                const normalized = normalizePointGeoJSON(parsed);
+                                if (normalized.features.length > MAX_START_POINTS) {
+                                    throw new Error(t("origin.fileTooMany", { limit: MAX_START_POINTS }));
+                                }
+                                const points: SimulationStartPoint[] = normalized.features.map((feature, index) => {
+                                    const properties = feature.properties ?? {};
+                                    const label = String(
+                                        properties.nome
+                                        ?? properties.name
+                                        ?? properties.label
+                                        ?? properties.titulo
+                                        ?? properties.title
+                                        ?? feature.id
+                                        ?? `Ponto ${index + 1}`,
+                                    );
+                                    return {
+                                        id: String(feature.id ?? index + 1),
+                                        label,
+                                        longitude: feature.geometry.coordinates[0],
+                                        latitude: feature.geometry.coordinates[1],
+                                    };
+                                });
+                                if (!geometriaGeoJSON) throw new Error(t("simulation.areaRequired"));
+                                const outsidePoints = points.filter((point) => !pointInsideBoundary(point));
+                                if (outsidePoints.length) {
+                                    throw new Error(t("origin.fileOutside", { count: outsidePoints.length }));
+                                }
+                                if (points.length === 0) throw new Error(t("origin.noPointResults"));
+                                uploadedStartPoints = points;
+                                startPointFileResults.replaceChildren();
+                                const placeholder = document.createElement("option");
+                                placeholder.value = "";
+                                placeholder.textContent = t("origin.fileSelectPlaceholder");
+                                startPointFileResults.appendChild(placeholder);
+                                points.forEach((point, index) => {
+                                    const option = document.createElement("option");
+                                    option.value = String(index);
+                                    option.textContent = `${index + 1}. ${point.label}`;
+                                    startPointFileResults.appendChild(option);
+                                });
+                                startPointFileResults.value = "";
+                                startPointFileResults.style.display = "block";
+                                setStartPointStatus(`${t("origin.fileLoaded", { count: points.length })} ${t("origin.chooseFilePoint")}`, "#2f855a");
+                            } catch (error) {
+                                uploadedStartPoints = [];
+                                startPointFileResults.replaceChildren();
+                                startPointFileResults.style.display = "none";
+                                setStartPointStatus(error instanceof Error ? error.message : String(error), "#c53030");
+                            } finally {
+                                startPointFileInput.value = "";
+                            }
+                        };
+                        reader.onerror = () => setStartPointStatus(t("origin.fileReadError"), "#c53030");
+                        reader.readAsText(file);
+                    });
+                    startPointFileResults.addEventListener("change", () => {
+                        const point = uploadedStartPoints[Number(startPointFileResults.value)];
+                        if (!point) return;
+                        try {
+                            validateStartPoint(point);
+                            setStartPointStatus(`${t("origin.pointReady")} ${point.label}`, "#2f855a");
+                        } catch (error) {
+                            setStartPointStatus(error instanceof Error ? error.message : String(error), "#c53030");
+                        }
+                    });
+                    updateStartPointMode();
                     
                     const opacIso = wrap.querySelector("#opacIso") as HTMLInputElement; 
                     const contornoIso = wrap.querySelector("#contornoIso") as HTMLInputElement;
@@ -2492,6 +3072,8 @@ export const plugin = {
                             isDrawingMode = false;
 
                             if (!isSample && geometriaGeoJSON && bboxCapturada) {
+                                clearClickedStartPoint();
+                                if (startPointMode.value === "map") setStartPointStatus(t("origin.chooseMapPoint"));
                                 areaStatus.innerHTML = SVG_ICONS.SUCCESS + " Capturado!";
                                 areaStatus.style.color = "#2f855a";
                                 areaCoords.innerText = "BBox: [" + bboxCapturada[0].toFixed(4) + ", " + bboxCapturada[1].toFixed(4) + ", " + bboxCapturada[2].toFixed(4) + ", " + bboxCapturada[3].toFixed(4) + "]";
@@ -2647,6 +3229,7 @@ export const plugin = {
 
                     btnReset.addEventListener("click", () => {
                         const mapObj = getMapInstance(app);
+                        clearClickedStartPoint();
                         removeSampleLayers();
                         setSatelliteVisibility(false);
                         basemapSelect.value = "default";
@@ -2671,6 +3254,18 @@ export const plugin = {
                         sampleStatus.style.color = "#4a5568";
                         sampleCoords.innerText = "";
                         sampleFileInput.value = "";
+                        uploadedStartPoints = [];
+                        addressStartPoints = [];
+                        startPointFileResults.replaceChildren();
+                        startPointFileResults.style.display = "none";
+                        startAddressResults.replaceChildren();
+                        startAddressResults.style.display = "none";
+                        startPointFileInput.value = "";
+                        startLatitudeInput.value = "";
+                        startLongitudeInput.value = "";
+                        startAddressQuery.value = "";
+                        startPointMode.value = "centroid";
+                        updateStartPointMode();
                         (wrap.querySelector("#rasterLegendsContainer") as HTMLDivElement).style.display = "none";
                         
                         clearInterval((window as any).simProgressInterval); (wrap.querySelector("#progressContainer") as HTMLDivElement).style.display = "none";
@@ -2681,25 +3276,59 @@ export const plugin = {
                     hiddenInput.addEventListener("change", (e: any) => {
                         const file = e.target.files[0]; if (file) {
                             areaStatus.innerHTML = SVG_ICONS.LOAD + " Lendo...";
+                            clearClickedStartPoint();
+                            geometriaGeoJSON = null;
+                            bboxCapturada = null;
+                            areaCoords.innerText = "";
+                            uploadedStartPoints = [];
+                            addressStartPoints = [];
+                            startPointFileResults.replaceChildren();
+                            startPointFileResults.style.display = "none";
+                            startAddressResults.replaceChildren();
+                            startAddressResults.style.display = "none";
+                            startPointMode.value = "centroid";
+                            updateStartPointMode();
+                            const previousMap = getMapInstance(app);
+                            if (previousMap) {
+                                if (previousMap.getLayer("smart15-input-area-fill")) previousMap.removeLayer("smart15-input-area-fill");
+                                if (previousMap.getLayer("smart15-input-area-line")) previousMap.removeLayer("smart15-input-area-line");
+                                if (previousMap.getSource("smart15-input-area")) previousMap.removeSource("smart15-input-area");
+                            }
+                            layersAtivos = layersAtivos.filter((id) => id !== "smart15-input-area-fill" && id !== "smart15-input-area-line");
                             const reader = new FileReader();
                             reader.onload = (ev: any) => {
                                 try {
-                                    geometriaGeoJSON = JSON.parse(ev.target.result);
+                                    const parsedGeoJSON = JSON.parse(String(ev.target?.result ?? "").replace(/^\uFEFF/, ""));
+                                    geometriaGeoJSON = normalizePolygonGeoJSON(parsedGeoJSON);
                                     const b = calculateBBox(geometriaGeoJSON);
-                                    if(b) {
-                                        bboxCapturada = [b[0][0], b[0][1], b[1][0], b[1][1]]; areaStatus.innerHTML = SVG_ICONS.SUCCESS + " Capturado!";
-                                        areaCoords.innerText = "BBox: [" + bboxCapturada[0].toFixed(4) + ", " + bboxCapturada[1].toFixed(4) + ", " + bboxCapturada[2].toFixed(4) + ", " + bboxCapturada[3].toFixed(4) + "]";
-                                        const sourceId = 'smart15-input-area';
-                                        const mapObj = getMapInstance(app);
-                                        if(mapObj) {
-                                            if (!mapObj.getSource(sourceId)) { mapObj.addSource(sourceId, { type: 'geojson', data: geometriaGeoJSON }); } else { mapObj.getSource(sourceId).setData(geometriaGeoJSON); }
-                                            if (!mapObj.getLayer(sourceId+'-fill')) { mapObj.addLayer({ id: sourceId+'-fill', type: 'fill', source: sourceId, paint: { 'fill-color': corArea.value, 'fill-opacity': 0.1 } }); layersAtivos.push(sourceId+'-fill'); }
-                                            if (!mapObj.getLayer(sourceId+'-line')) { mapObj.addLayer({ id: sourceId+'-line', type: 'line', source: sourceId, paint: { 'line-color': corArea.value, 'line-width': 2, 'line-opacity': 0 } }); layersAtivos.push(sourceId+'-line'); }
-                                            mapObj.fitBounds(b, { padding: 40 }); painelPosProcessamento.style.display = "block"; appendLayerToggle(sourceId+'-fill', t("layer.studyArea"), listaCamadasInput); updateLayerStyle();
-                                        }
-                                    } else { areaStatus.innerHTML = SVG_ICONS.WARN + " Falha BBox."; }
-                                } catch(err) { areaStatus.innerHTML = SVG_ICONS.WARN + " Erro GeoJSON"; }
+                                    if (!b) throw new Error("Nenhuma geometria poligonal válida foi encontrada.");
+                                    bboxCapturada = [b[0][0], b[0][1], b[1][0], b[1][1]];
+                                    areaStatus.innerHTML = SVG_ICONS.SUCCESS + " Capturado!";
+                                    areaCoords.innerText = "BBox: [" + bboxCapturada[0].toFixed(4) + ", " + bboxCapturada[1].toFixed(4) + ", " + bboxCapturada[2].toFixed(4) + ", " + bboxCapturada[3].toFixed(4) + "]";
+                                    const sourceId = 'smart15-input-area';
+                                    const mapObj = getMapInstance(app);
+                                    if(mapObj) {
+                                        if (!mapObj.getSource(sourceId)) { mapObj.addSource(sourceId, { type: 'geojson', data: geometriaGeoJSON }); } else { mapObj.getSource(sourceId).setData(geometriaGeoJSON); }
+                                        if (!mapObj.getLayer(sourceId+'-fill')) { mapObj.addLayer({ id: sourceId+'-fill', type: 'fill', source: sourceId, paint: { 'fill-color': corArea.value, 'fill-opacity': 0.1 } }); layersAtivos.push(sourceId+'-fill'); }
+                                        if (!mapObj.getLayer(sourceId+'-line')) { mapObj.addLayer({ id: sourceId+'-line', type: 'line', source: sourceId, paint: { 'line-color': corArea.value, 'line-width': 2, 'line-opacity': 0 } }); layersAtivos.push(sourceId+'-line'); }
+                                        mapObj.fitBounds(b, { padding: 40 }); painelPosProcessamento.style.display = "block"; appendLayerToggle(sourceId+'-fill', t("layer.studyArea"), listaCamadasInput); updateLayerStyle();
+                                    }
+                                } catch(err) {
+                                    console.error("[Smart15] Erro ao carregar limite geográfico:", err);
+                                    areaStatus.innerHTML = SVG_ICONS.WARN;
+                                    areaStatus.appendChild(document.createTextNode(" " + t("area.uploadError") + " " + (err instanceof Error ? err.message : String(err))));
+                                    geometriaGeoJSON = null;
+                                    bboxCapturada = null;
+                                }
+                                hiddenInput.value = "";
                             }; reader.readAsText(file);
+                            reader.onerror = () => {
+                                geometriaGeoJSON = null;
+                                bboxCapturada = null;
+                                areaStatus.innerHTML = SVG_ICONS.WARN;
+                                areaStatus.appendChild(document.createTextNode(" " + t("area.uploadError") + " falha ao ler o arquivo."));
+                                hiddenInput.value = "";
+                            };
                         }
                     });
 
@@ -2732,88 +3361,8 @@ export const plugin = {
                                     throw new Error("O arquivo não é um FeatureCollection válido.");
                                 }
 
-                                const normalizedFeatures: SamplePolygonFeature[] =
-                                    parsed.features.map((feature: any, index: number) => {
-                                        if (
-                                            feature?.type !== "Feature" ||
-                                            feature?.geometry?.type !== "Polygon"
-                                        ) {
-                                            throw new Error(
-                                                `A feição ${index + 1} não é um polígono válido.`
-                                            );
-                                        }
-
-                                        const rawClass =
-                                        feature.properties?.classe
-                                        ?? feature.properties?.class;
-
-                                        const normalizeClassName = (value: unknown): string =>
-                                        String(value ?? "")
-                                            .trim()
-                                            .normalize("NFD")
-                                            .replace(/\p{Diacritic}/gu, "")
-                                            .toLowerCase();
-
-                                        const SAMPLE_CLASS_ALIASES: Record<string, number> = {
-                                          asfalto: 1,
-                                          via: 1,
-
-                                          calcada: 2,
-                                          passeio: 2,
-
-                                          construcao: 3,
-                                          telhado: 3,
-
-                                          arvore: 4,
-
-                                          grama: 5,
-                                          graminea: 5,
-                                          rasteira: 5,
-
-                                          solo: 6,
-                                          terra: 6,
-                                          terraexposta: 6,
-                                        };
-
-                                        const numericClass = Number(rawClass);
-
-                                        const classEntry = Object.entries(SAMPLE_CLASSES)
-                                        .find(([, className]) =>
-                                            normalizeClassName(className)
-                                            === normalizeClassName(rawClass),
-                                        );
-                                        const normalizedClass = normalizeClassName(rawClass);
-
-                                        const classe = Number.isInteger(numericClass)
-                                          ? numericClass
-                                          : SAMPLE_CLASS_ALIASES[normalizedClass]
-                                            ?? Number(classEntry?.[0]);
-
-                                        if (
-                                        !Number.isInteger(classe)
-                                        || SAMPLE_CLASSES[classe] === undefined
-                                        ) {
-                                        throw new Error(
-                                            `A feição ${index + 1} possui classe inválida: ${String(rawClass)}.`,
-                                        );
-                                        }
-
-                                        const classeNome =
-                                        SAMPLE_CLASSES[classe]
-                                        ?? feature.properties?.classe_nome;
-
-                                        return {
-                                            type: "Feature",
-                                            properties: {
-                                                classe,
-                                                classe_nome: classeNome
-                                            },
-                                            geometry: {
-                                                type: "Polygon",
-                                                coordinates: feature.geometry.coordinates
-                                            }
-                                        };
-                                    });
+                                const normalizedGeoJSON = normalizePolygonGeoJSON(parsed, true);
+                                const normalizedFeatures = normalizeSampleFeatures(normalizedGeoJSON.features);
 
                                 amostrasGeoJSON = {
                                     type: "FeatureCollection",
@@ -2848,9 +3397,8 @@ export const plugin = {
                                     "[Smart15] Erro ao carregar amostras:",
                                     error
                                 );
-                                sampleStatus.innerHTML =
-                                    SVG_ICONS.WARN +
-                                    " Erro ao ler o GeoJSON de amostras.";
+                                const message = error instanceof Error ? error.message : String(error);
+                                sampleStatus.textContent = "Erro ao ler amostras: " + message;
                                 sampleStatus.style.color = "#e53e3e";
                             } finally {
                                 sampleFileInput.value = "";
@@ -3032,6 +3580,16 @@ export const plugin = {
                           return;
                         }
 
+                        let selectedStartPoint: SimulationStartPoint | null = null;
+                        try {
+                          selectedStartPoint = getSelectedStartPoint();
+                        } catch (error) {
+                          const message = error instanceof Error ? error.message : String(error);
+                          setStartPointStatus(message, "#c53030");
+                          alert(message);
+                          return;
+                        }
+
                         const btnSimular =
                           wrap.querySelector(
                             "#btnSimular",
@@ -3130,12 +3688,15 @@ export const plugin = {
                             const pData = {
                                 perfis: Array.from(wrap.querySelectorAll(".perfil-target:checked")).map((cb:any)=>cb.value), alvos: Array.from(wrap.querySelectorAll(".osm-target:checked")).map((cb:any)=>cb.value),
                                 formatos: Array.from(wrap.querySelectorAll(".formato-saida:checked")).map((cb:any)=>cb.value), bbox: bboxCapturada, geometria: geometriaGeoJSON,
+                                start_point_mode: startPointMode.value,
+                                start_point: selectedStartPoint ? [selectedStartPoint.longitude, selectedStartPoint.latitude] : null,
+                                start_point_label: selectedStartPoint?.label ?? "Centroide do polígono",
                                 formatos_export: Array.from(wrap.querySelectorAll(".formato-export:checked")).map((cb:any)=>cb.value),
                                 visualizacao: { extrusao_3d: (wrap.querySelector("#extrusao3d") as HTMLInputElement).checked },
                                 modo_temp: (wrap.querySelector("#modoTemp") as HTMLSelectElement).value,
                                 modo_veg: (wrap.querySelector("#modoVeg") as HTMLSelectElement).value,
                                 modo_dem: (wrap.querySelector("#modoDem") as HTMLSelectElement).value,
-                                pluginVersion: "2.0.0",
+                                pluginVersion: "2.1.0",
                                 tempo_alvo: 15,
 
                                 dataSources: [
@@ -3172,13 +3733,12 @@ export const plugin = {
                               },
                             );
 
+                            const res = await response.json().catch(() => ({}));
                             if (!response.ok) {
                               throw new Error(
-                                `Falha HTTP ${response.status}`
+                                res.detail || `Falha HTTP ${response.status}`
                               );
                             }
-
-                            const res = await response.json();
 
                             if (res.status !== "sucesso" || !res.data) {
                               throw new Error(
@@ -3395,10 +3955,17 @@ export const plugin = {
                             (window as any).simProgressInterval,
                           );
 
+                          const failureMessage = erro instanceof Error
+                            ? erro.message
+                            : String(erro);
                           progressLabel.innerHTML =
                             SVG_ICONS.WARN
                             + " "
-                            + t("simulation.serverFailed");
+                            + t("simulation.serverFailed")
+                            + ": ";
+                          progressLabel.appendChild(
+                            document.createTextNode(failureMessage),
+                          );
                         }
                         finally {
                           btnSimular.innerText =
